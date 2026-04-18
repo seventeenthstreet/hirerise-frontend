@@ -13,7 +13,9 @@ function logStep(step: string, meta?: Record<string, unknown>) {
 }
 
 function logStepError(step: string, error: unknown, meta?: Record<string, unknown>) {
-  console.error(`[Onboarding] ${step} failed`, {
+  // console.warn (not console.error) — prevents Next.js from showing a red
+  // Console Error overlay in the browser for non-fatal onboarding step failures.
+  console.warn(`[Onboarding] ${step} failed`, {
     error: error instanceof Error ? error.message : String(error),
     ...meta,
   });
@@ -239,14 +241,45 @@ export const onboardingService = {
   },
 
   /** GET /api/v1/onboarding/progress */
-  async getProgress() {
+  async getProgress(): Promise<{
+    step:                string | null;
+    completedSteps:      string[];
+    onboardingCompleted: boolean;
+    completedAt?:        string | null;
+    updatedAt?:          string | null;
+  }> {
     try {
-      const result = await apiFetch<{ step: string; completedSteps: string[] }>('/onboarding/progress');
-      logStep('getProgress', { currentStep: result.step, completedCount: result.completedSteps.length });
+      const result = await apiFetch<{
+        step:                string | null;
+        completedSteps:      string[];
+        onboardingCompleted: boolean;
+        completedAt?:        string | null;
+        updatedAt?:          string | null;
+      }>('/onboarding/progress');
+
+      logStep('getProgress', {
+        currentStep:         result.step,
+        completedCount:      result.completedSteps?.length ?? 0,
+        onboardingCompleted: result.onboardingCompleted,
+      });
+
       return result;
-    } catch (err) {
-      logStepError('getProgress', err);
-      throw err;
+    } catch (err: any) {
+      // getProgress failing is non-fatal — happens for brand-new users with no
+      // progress row yet (404/500) or temporary backend downtime.
+      // Use console.warn (not logStepError) so it never appears as a red
+      // Console Error in the browser DevTools overlay.
+      const status = err?.status ?? err?.statusCode ?? 0;
+      if (status !== 404) {
+        console.warn('[Onboarding] getProgress unavailable, starting fresh:', err?.message ?? String(err));
+      }
+
+      // Return a safe empty default — onboarding flow starts from scratch
+      return {
+        step:                null,
+        completedSteps:      [],
+        onboardingCompleted: false,
+      };
     }
   },
 

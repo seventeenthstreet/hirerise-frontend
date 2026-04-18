@@ -431,17 +431,30 @@ function StepUpload({ onParsed, onSkip }: {
     setError(null);
     try {
       const form = new FormData();
-      form.append('file', file);
-      const res = await apiFetch<{ parsedData?: Partial<ResumeData>; resumeId?: string }>('/resumes', {
+      form.append('resume', file);  // must match multer's upload.single('resume') on the backend
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body:   form,
-        headers: {},
-        skipAuth: false,
+        // Do NOT set Content-Type — browser sets multipart/form-data + boundary automatically
       });
-      // Map parsed data to our schema
-      onParsed(res.parsedData ?? {});
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error((errBody as { message?: string }).message || `Upload failed (${res.status})`);
+      }
+      const json = await res.json() as {
+        parsedData?: Partial<ResumeData>;
+        parsed?:     Partial<ResumeData>;
+        data?:       Partial<ResumeData>;
+        resume?:     Partial<ResumeData>;
+        resumeId?:   string;
+      };
+      // Accept any of the common shapes the API might return
+      const parsed: Partial<ResumeData> = json.parsedData ?? json.parsed ?? json.data ?? json.resume ?? {};
+      onParsed(parsed);
     } catch (e: any) {
       setError(e?.message || 'Upload failed. Please try again.');
+    } finally {
+      // Always re-enable the button — whether success or failure
       setParsing(false);
     }
   }
