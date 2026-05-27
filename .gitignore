@@ -49,3 +49,14 @@ temp
 # Cache
 .cache
 .eslintcache
+
+# Testing
+playwright-report
+test-results
+
+# Package manager
+.pnpm-store
+
+# Misc
+*.pid
+*.seed
