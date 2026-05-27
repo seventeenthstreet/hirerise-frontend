@@ -1,29 +1,29 @@
-// src/app/layout.tsx
-// Root layout — wraps ALL routes.
-//
-// FIX: Imports Providers from './providers' (the canonical migrated version
-// that uses the queryClient singleton from lib/queryClient.ts).
-//
-// Previously imported from '@/components/Providers' — the old Firebase-era
-// file that creates a new QueryClient on each render and has stale comments.
-//
-// Provider order:
-//   1. QueryClientProvider  — TanStack Query
-//   2. AuthProvider         — Supabase auth state
-//   3. Toaster              — react-hot-toast
-
-import type { Metadata } from 'next';
-import { Providers } from './providers';
+import type { ReactNode } from 'react';
 import './globals.css';
+import { Providers } from '@/providers/Providers';
+import { validateEnv } from '@/lib/env';
 
-export const metadata: Metadata = {
-  title: 'HireRise — Career Intelligence Platform',
-  description: 'Know exactly where your career stands with AI-powered insights.',
-};
+/**
+ * Root layout — single server component that hands off to the Providers
+ * client boundary immediately.
+ *
+ * WHY ONLY ONE CLIENT IMPORT:
+ *  Importing multiple 'use client' components (QueryProvider, AppProvider,
+ *  RootErrorBoundary) directly in a server layout and composing them in JSX
+ *  gives webpack multiple overlapping client boundaries to resolve. It cannot
+ *  cleanly split the server chunk from the client chunks, producing a malformed
+ *  app/layout.js that the browser times out loading (ChunkLoadError).
+ *
+ *  The fix: one <Providers> import = one clean server→client split point.
+ *  All provider nesting (RootErrorBoundary → QueryProvider → AppProvider)
+ *  lives inside src/providers/Providers.tsx, which is a single 'use client' file.
+ */
+export default function RootLayout({ children }: { children: ReactNode }) {
+  // Server-only env validation — runs on every request, never on the client.
+  validateEnv();
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
         <Providers>
           {children}

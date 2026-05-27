@@ -1,168 +1,158 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+/**
+ * src/app/globals.css — HireRise Global Stylesheet + Design Token Foundation
+ *
+ * PURPOSE:
+ *  Establishes semantic CSS custom properties (tokens) consumed by Tailwind's
+ *  semantic color mapping in tailwind.config.js.
+ *
+ *  This is the single source of truth for all semantic colors, spacing,
+ *  and typography foundations across HireRise.
+ *
+ * STRUCTURE:
+ *  1. Tailwind directives
+ *  2. :root — light mode tokens
+ *  3. .dark — dark mode overrides
+ *  4. Base resets
+ *  5. Typography foundations
+ *
+ * IMPORTANT: Do NOT hardcode colors in components. Use semantic tokens only.
+ * All values use HSL channel format (no hsl() wrapper) so Tailwind can
+ * compose opacity modifiers: e.g. bg-primary/10 → hsl(var(--primary) / 0.1)
+ */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   LIGHT MODE TOKENS (default)
+   ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  --font-display: 'DM Sans', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-}
+  /* ── Surface ── */
+  --background:        0 0% 98%;        /* near-white page bg */
+  --foreground:        222 20% 12%;     /* near-black text */
 
-@layer base {
-  * { box-sizing: border-box; }
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-  }
-  body {
-    /* FIX: was text-surface-900 (#12152a = near black on near-black bg = invisible)
-       Now: text-white/80 = readable light text on dark background */
-    @apply bg-surface-950 text-white;
-    font-family: var(--font-body);
-  }
-  :focus:not(:focus-visible) { outline: none; }
-  :focus-visible { @apply outline-none ring-2 ring-hr-500 ring-offset-2; }
-}
+  /* ── Card ── */
+  --card:              0 0% 100%;       /* pure white cards */
+  --card-foreground:   222 20% 12%;
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: theme('colors.surface.700') transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-surface-700; }
+  /* ── Primary brand ── */
+  --primary:           221 83% 53%;     /* blue-600 equivalent */
+  --primary-foreground: 0 0% 100%;      /* white text on primary */
+
+  /* ── Muted / subdued ── */
+  --muted:             220 14% 94%;     /* light grey surfaces */
+  --muted-foreground:  220 9% 46%;      /* subdued text */
+
+  /* ── Border ── */
+  --border:            220 13% 88%;     /* light border */
+
+  /* ── Semantic states ── */
+  --destructive:       0 72% 51%;       /* red-600 */
+  --destructive-foreground: 0 0% 100%;
+
+  --success:           142 71% 45%;     /* green-500 */
+  --success-foreground: 0 0% 100%;
+
+  --warning:           38 92% 50%;      /* amber-500 */
+  --warning-foreground: 0 0% 100%;
+
+  /* ── Input ── */
+  --input:             220 13% 88%;     /* same as border */
+  --ring:              221 83% 53%;     /* focus ring = primary */
+
+  /* ── Radius ── */
+  --radius:            0.5rem;          /* 8px default border radius */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   V3 Design System tokens — raw CSS avoids Tailwind @apply opacity issues
+   DARK MODE TOKENS
+   Override by applying class="dark" to <html>.
    ───────────────────────────────────────────────────────────────────────────── */
+.dark {
+  --background:        222 20% 9%;
+  --foreground:        210 17% 93%;
 
-/* Core card — shadow-first, minimal border */
-.card-v3 {
-  border-radius: 1rem;
-  background-color: rgba(15, 21, 37, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28), 0 1px 4px rgba(0, 0, 0, 0.18);
+  --card:              222 20% 12%;
+  --card-foreground:   210 17% 93%;
+
+  --primary:           217 91% 60%;
+  --primary-foreground: 222 20% 9%;
+
+  --muted:             217 19% 20%;
+  --muted-foreground:  215 14% 55%;
+
+  --border:            217 19% 22%;
+
+  --destructive:       0 63% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success:           142 63% 45%;
+  --success-foreground: 0 0% 100%;
+
+  --warning:           38 85% 55%;
+  --warning-foreground: 0 0% 9%;
+
+  --input:             217 19% 22%;
+  --ring:              217 91% 60%;
 }
 
-/* Section label */
-.label-v3 {
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: rgba(255, 255, 255, 0.32);
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE RESETS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring using semantic token */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
-/* Card heading */
-.heading-v3 {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.4;
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPOGRAPHY FOUNDATIONS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-medium; }
+  p  { @apply leading-relaxed; }
 }
 
-/* Primary button */
-.btn-v3-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 0.75rem;
-  background-color: #3d65f6;
-  padding: 0.5rem 1rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #ffffff;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, transform 0.1s ease;
-  cursor: pointer;
-  border: none;
-}
-.btn-v3-primary:hover { background-color: #2546eb; }
-.btn-v3-primary:active { transform: scale(0.96); }
-
-/* Ghost button */
-.btn-v3-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: rgba(255, 255, 255, 0.04);
-  padding: 0.5rem 1rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.55);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
-  cursor: pointer;
-}
-.btn-v3-ghost:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
-}
-.btn-v3-ghost:active { transform: scale(0.96); }
-
-/* Borderless progress bar track */
-.progress-track {
-  height: 5px;
-  width: 100%;
-  border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.07);
-  overflow: hidden;
+/* ─────────────────────────────────────────────────────────────────────────────
+   SPACING FOUNDATIONS
+   These CSS custom properties allow design-system-level spacing overrides
+   without touching component code. Currently maps to Tailwind defaults.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --page-padding-x:    1rem;       /* 16px — mobile */
+  --page-padding-y:    2rem;       /* 32px */
+  --page-max-width:    80rem;      /* 1280px = max-w-7xl */
+  --section-gap:       3rem;       /* 48px between major sections */
+  --card-padding:      1.5rem;     /* 24px inside cards */
 }
 
-/* Tooltip bubble */
-.tooltip-v3 {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 60;
-  width: 15rem;
-  border-radius: 0.75rem;
-  background-color: #1c2540;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-  padding: 0.625rem 0.75rem;
-  font-size: 0.6875rem;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.75);
-  pointer-events: none;
-  animation: fadeInUp 0.15s ease-out;
-}
-.tooltip-v3::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #1c2540;
+@media (min-width: 640px) {
+  :root {
+    --page-padding-x:  1.5rem;     /* 24px — sm+ */
+  }
 }
 
-/* Skill reveal pill */
-.skill-pill {
-  display: inline-block;
-  border-radius: 0.375rem;
-  background-color: rgba(255, 255, 255, 0.08);
-  padding: 0.125rem 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-/* Inline badge */
-.badge-critical { background-color: rgba(248, 113, 113, 0.12); color: #f87171; border-radius: 9999px; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-.badge-moderate  { background-color: rgba(251, 191, 36, 0.12); color: #fbbf24; border-radius: 9999px; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-.badge-good      { background-color: rgba(74, 222, 128, 0.12); color: #4ade80; border-radius: 9999px; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (min-width: 1024px) {
+  :root {
+    --page-padding-x:  2rem;       /* 32px — lg+ */
+  }
 }
