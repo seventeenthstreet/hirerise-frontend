@@ -229,10 +229,14 @@ export class HydrationErrorBoundary extends Component<
     // Phase 9 — forward through observability adapter chain
     // When Sentry is added, registerAdapter() picks this up automatically.
     try {
-      emitErrorBoundaryEvent(error, errorId ?? Date.now(), {
-        boundary:      boundaryName,
-        componentStack: info.componentStack,
-      });
+      emitErrorBoundaryEvent(
+        error,
+        errorId ?? Date.now(),
+        JSON.stringify({
+          boundary: boundaryName,
+          componentStack: info.componentStack,
+        })
+      );
     } catch { /* never surface */ }
 
     // Phase 1 — structured log

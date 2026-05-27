@@ -1,9 +1,23 @@
 /**
  * src/hooks/queryKeys/academicQueryKeys.ts
  *
- * CENTRALIZED QUERY KEY FACTORY — Academic Intelligence Platform
- * ──────────────────────────────────────────────────────────────
+ * CENTRALIZED QUERY KEY FACTORY — Academic Intelligence Platform (HARDENED)
+ * ──────────────────────────────────────────────────────────────────────────
  * Single source of truth for ALL React Query cache keys in the academic module.
+ *
+ * CHANGES FROM ORIGINAL (QK-01):
+ *  The `subjects` key factory takes a `streamId` that is a Postgres UUID.
+ *  Unlike the other taxonomy keys (country codes, board codes, region codes —
+ *  all uppercased for deterministic serialization), UUIDs are already
+ *  canonically lowercase by the RFC 4122 spec and Postgres convention.
+ *  Applying `.toUpperCase()` to a UUID would break cache identity.
+ *
+ *  The original code left this as an undocumented implicit assumption.
+ *  This version:
+ *  1. Documents the UUID assumption explicitly with a JSDoc comment.
+ *  2. Adds a DEV-mode runtime guard that warns if a non-UUID is passed,
+ *     which would signal a caller passing the wrong value (e.g. stream_code
+ *     instead of stream.id).
  *
  * ARCHITECTURE POSITION:
  *   [THIS FILE] → imported by hooks/queries/* and hooks/mutations/*
@@ -32,6 +46,8 @@
  *
  *   ['academic', 'taxonomy', 'subjects', streamId, includeIntegrated]
  *     ↳ Subjects for a stream
+ *     NOTE: streamId is a UUID (lowercase, e.g. "a1b2c3d4-..."). Do NOT
+ *     normalize to uppercase — it would change the key identity.
  *
  *   ['academic', 'taxonomy', 'languages', regionCode, countryCode]
  *     ↳ Languages for a region+country
@@ -50,13 +66,39 @@
  *
  * DESIGN RULES:
  *  ✅  All keys are `as const` tuples — no magic strings in hooks.
- *  ✅  Taxonomy keys are NOT user-scoped (taxonomy is shared, read-only reference data).
+ *  ✅  Taxonomy string codes (countryCode, regionCode, boardCode, streamCode)
+ *      are normalized to UPPERCASE for deterministic cache identity.
+ *  ✅  streamId is a UUID — NOT normalized (UUIDs are lowercase by spec).
  *  ✅  Onboarding keys ARE user-scoped (student-specific state).
  *  ✅  Factory functions are module-level constants — not lambdas inside hook closures.
  *  ❌  No imports from API or hook layers.
  *  ❌  No business logic.
  *  ❌  No React imports.
  */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEV GUARD — UUID format validator
+// ─────────────────────────────────────────────────────────────────────────────
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * In development, warns if a value that should be a UUID does not match the
+ * UUID format. This catches callers who accidentally pass stream_code instead
+ * of stream.id — a mistake that would silently produce an uncacheable key.
+ *
+ * No-ops in production (process.env.NODE_ENV !== 'development').
+ */
+function assertUuid(value: string, context: string): void {
+  if (process.env.NODE_ENV === 'development' && value !== '' && !UUID_PATTERN.test(value)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[academicQueryKeys] ${context}: expected a UUID but received "${value}". ` +
+      'Ensure you are passing stream.id (UUID) not stream.stream_code.',
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROOT
@@ -93,8 +135,19 @@ const streams = (boardCode: string, countryCode: string) =>
     countryCode.toUpperCase(),
   ] as const;
 
-const subjects = (streamId: string, includeIntegrated: boolean = true) =>
-  ['academic', 'taxonomy', 'subjects', streamId, includeIntegrated] as const;
+/**
+ * Query key for subjects of a stream.
+ *
+ * @param streamId         UUID of the stream (e.g. "a1b2c3d4-...").
+ *                         MUST be a UUID — NOT the stream_code string.
+ *                         UUIDs are NOT uppercased (they are lowercase by spec).
+ * @param includeIntegrated Whether to include integrated subjects (default: true).
+ */
+const subjects = (streamId: string, includeIntegrated: boolean = true) => {
+  // QK-01: DEV-mode guard — ensure callers pass the UUID, not the code
+  assertUuid(streamId, 'subjects(streamId)');
+  return ['academic', 'taxonomy', 'subjects', streamId, includeIntegrated] as const;
+};
 
 const languages = (regionCode: string, countryCode: string) =>
   [

@@ -66,7 +66,7 @@ export function useStudentAcademicProfile(
 ): UseStudentAcademicProfileReturn {
   const enabled = isQueryEnabled(userId);
 
-  const result: UseQueryResult<StudentFullProfile, Error> = useQuery({
+  const result = useQuery<StudentFullProfile, Error>({
     queryKey:  academicQueryKeys.studentProfile(userId ?? ''),
     queryFn:   async ({ signal: _signal }) => {
       // signal is available if React Query adds cancellation; pass through when

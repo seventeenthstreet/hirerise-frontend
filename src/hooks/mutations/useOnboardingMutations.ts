@@ -1,8 +1,8 @@
 /**
  * src/hooks/mutations/useOnboardingMutations.ts
  *
- * ONBOARDING MUTATION HOOKS
- * ──────────────────────────
+ * ONBOARDING MUTATION HOOKS (HARDENED — Phase 3 Verification Pass)
+ * ─────────────────────────────────────────────────────────────────
  * Four mutation hooks that cover the complete academic onboarding write path:
  *
  *   useSaveAcademicProfile()   — creates/replaces the student's academic profile
@@ -10,10 +10,31 @@
  *   useSaveLanguages()         — saves language selections (optimistic)
  *   useCompleteOnboarding()    — marks onboarding as complete
  *
+ * CHANGES FROM ORIGINAL (OP-01):
+ *  Invalidation moved from `onSuccess` to `onSettled` in ALL four mutations.
+ *
+ *  RATIONALE:
+ *  `onSuccess` does not fire if:
+ *    (a) The server committed but the network dropped during response delivery
+ *        — the mutationFn throws and `onError` fires instead.
+ *    (b) The mutationFn receives an error response envelope.
+ *  In both cases the server may have written the data. Without invalidation
+ *  the optimistic cache state persists indefinitely and never re-syncs.
+ *
+ *  `onSettled` fires after BOTH success AND error. Invalidating on error is:
+ *    - Safe: it triggers a background refetch that resolves true server state
+ *    - Cheap: React Query deduplicates the refetch if one is already in-flight
+ *    - Correct: it collapses any partial-success divergence
+ *
+ *  The `data` parameter of `onSettled` carries the mutation result on success
+ *  (same as `onSuccess`'s `data`) and is `undefined` on error. The `error`
+ *  parameter carries the failure on error and is `null` on success.
+ *
  * OPTIMISTIC UPDATES:
  *   useSaveSubjects and useSaveLanguages apply optimistic updates to the
- *   full profile cache so the UI reflects changes instantly. On error, the
- *   previous state is rolled back and a telemetry event is emitted.
+ *   full profile cache so the UI reflects changes instantly. On error the
+ *   previous state is rolled back in `onError` and then `onSettled` triggers
+ *   a clean server re-fetch.
  *
  * INVALIDATION:
  *   All mutations delegate invalidation to createAcademicInvalidationService.
@@ -70,7 +91,7 @@ import type {
  * Creates or replaces the student's academic profile.
  * Replay-safe — safe to call multiple times with the same payload.
  *
- * Invalidates: studentProfile
+ * Invalidates: studentProfile (in onSettled — fires on success AND error)
  *
  * @param userId  Supabase Auth UID — needed for targeted cache invalidation.
  *
@@ -124,6 +145,7 @@ export function useSaveAcademicProfile(
         'academic.onboarding.profile_create.error',
         correlationId,
       );
+      // Rollback snapshot — restore previous profile
       if (context?.previousProfile !== undefined) {
         queryClient.setQueryData(
           academicQueryKeys.studentProfile(userId),
@@ -132,7 +154,10 @@ export function useSaveAcademicProfile(
       }
     },
 
-    onSuccess: async () => {
+    // OP-01 FIX: invalidate in onSettled (fires on BOTH success AND error)
+    // so partial-success scenarios (server wrote, client received error) are
+    // resolved by a clean refetch.
+    onSettled: async () => {
       await invalidate.afterCreateProfile(userId);
     },
   });
@@ -147,7 +172,7 @@ export function useSaveAcademicProfile(
  * Applies an optimistic update so the UI reflects the new selections
  * before the server confirms.
  *
- * Invalidates: studentSubjects + studentProfile
+ * Invalidates: studentSubjects + studentProfile (in onSettled)
  *
  * @param userId    Supabase Auth UID.
  * @param subjects  Full list of available subjects (needed to build optimistic state).
@@ -230,6 +255,7 @@ export function useSaveSubjects(
         'academic.onboarding.subjects_save.error',
         correlationId,
       );
+      // Rollback optimistic state — restore pre-mutation snapshots
       if (context?.previousSubjects !== undefined) {
         queryClient.setQueryData(
           academicQueryKeys.studentSubjects(userId),
@@ -244,7 +270,10 @@ export function useSaveSubjects(
       }
     },
 
-    onSuccess: async () => {
+    // OP-01 FIX: onSettled fires after BOTH success AND error.
+    // After onError rolls back the optimistic state, onSettled immediately
+    // triggers a server refetch — resolving any server-side partial writes.
+    onSettled: async () => {
       await invalidate.afterSaveSubjects(userId);
     },
   });
@@ -258,7 +287,7 @@ export function useSaveSubjects(
  * Saves language selections (medium of instruction + additional languages).
  * Applies an optimistic update to the full profile cache.
  *
- * Invalidates: studentLanguages + studentProfile
+ * Invalidates: studentLanguages + studentProfile (in onSettled)
  *
  * @param userId     Supabase Auth UID.
  * @param languages  Full list of available languages (for optimistic state).
@@ -358,7 +387,8 @@ export function useSaveLanguages(
       }
     },
 
-    onSuccess: async () => {
+    // OP-01 FIX: onSettled
+    onSettled: async () => {
       await invalidate.afterSaveLanguages(userId);
     },
   });
@@ -372,7 +402,7 @@ export function useSaveLanguages(
  * Marks the academic onboarding as complete.
  * Replay-safe — if already completed, the backend returns `was_replay: true`.
  *
- * Invalidates: entire onboarding namespace for the user
+ * Invalidates: entire onboarding namespace for the user (in onSettled)
  *
  * @param userId  Supabase Auth UID.
  */
@@ -407,7 +437,8 @@ export function useCompleteOnboarding(
       );
     },
 
-    onSuccess: async () => {
+    // OP-01 FIX: onSettled
+    onSettled: async () => {
       await invalidate.afterCompleteOnboarding(userId);
     },
   });

@@ -1,25 +1,37 @@
 /**
  * src/hooks/invalidation/academicInvalidationService.ts
  *
- * ACADEMIC INVALIDATION SERVICE
- * ───────────────────────────────
+ * ACADEMIC INVALIDATION SERVICE (HARDENED — Phase 3 Verification Pass)
+ * ──────────────────────────────────────────────────────────────────────
  * The ONLY place in the frontend that calls queryClient.invalidateQueries
  * or queryClient.removeQueries for the academic module.
  *
+ * CHANGES FROM ORIGINAL (IV-01):
+ *  `afterCompleteOnboarding` previously called:
+ *
+ *    queryClient.invalidateQueries({ queryKey: academicQueryKeys.onboarding() })
+ *
+ *  `academicQueryKeys.onboarding()` returns `['academic', 'onboarding']` — a
+ *  prefix-match that hits ALL onboarding keys for ALL users in the cache.
+ *  In a single-user browser client this is functionally harmless today, but:
+ *
+ *  1. It is semantically incorrect — the intent is to invalidate the current
+ *     user's data, not every user who ever used this QueryClient instance.
+ *  2. It is not safe for service worker / multi-account scenarios that may
+ *     surface in Phase 4+.
+ *  3. It breaks the pattern established by every other `after*` method, which
+ *     are explicitly user-scoped.
+ *
+ *  Fixed: `afterCompleteOnboarding(userId)` now invalidates the three leaf
+ *  keys for that specific user, matching the same pattern as `afterSaveSubjects`
+ *  and `afterSaveLanguages`.
+ *
  * GOVERNANCE RULE:
  *  ❌ Components NEVER call invalidateQueries directly.
- *  ❌ Mutation onSuccess callbacks NEVER call invalidateQueries directly.
- *  ✅ Mutations call methods on this service from their onSuccess handler.
+ *  ❌ Mutation onSuccess/onSettled callbacks NEVER call invalidateQueries directly.
+ *  ✅ Mutations call methods on this service from their onSettled handler.
  *  ✅ This service is the single authoritative source for what to invalidate
  *     after each mutation.
- *
- * DESIGN RATIONALE:
- *  Centralising invalidation here means:
- *  1. Adding a new query key that should be invalidated after "save subjects"
- *     requires a one-line change in ONE place, not hunting across hook files.
- *  2. Telemetry events for cache invalidation are emitted consistently.
- *  3. Cross-cutting invalidation (e.g. invalidate both profile AND subjects
- *     after completing onboarding) is composed here, not scattered.
  *
  * TELEMETRY:
  *  Every invalidation emits a 'academic.cache.invalidate' event with the
@@ -32,16 +44,34 @@ import { academicTelemetry }   from '../../telemetry/academicTelemetry';
 import { generateCorrelationId } from '../types/rpcEnvelope.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TYPED INVALIDATION CONTRACTS
+// Documents what each mutation is expected to invalidate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Describes the cache scope invalidated by each named mutation.
+ * Used as documentation contract — enforce via code review, not runtime.
+ */
+export type InvalidationContract = {
+  afterCreateProfile:      'onboarding:profile';
+  afterSaveSubjects:       'onboarding:subjects+profile';
+  afterSaveLanguages:      'onboarding:languages+profile';
+  afterCompleteOnboarding: 'onboarding:profile+subjects+languages';
+  invalidateTaxonomy:      'taxonomy:all';
+  invalidateSubjectsForStream: `taxonomy:subjects:${string}`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FACTORY — creates an invalidation service bound to a QueryClient instance
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Creates an invalidation service bound to the provided QueryClient.
- * Call this inside a mutation's onSuccess handler:
+ * Call this inside a mutation's onSettled handler:
  *
  * @example
  *   const invalidate = createAcademicInvalidationService(queryClient);
- *   // ...inside useSaveSubjects onSuccess:
+ *   // ...inside useSaveSubjects onSettled:
  *   await invalidate.afterSaveSubjects(userId);
  */
 export function createAcademicInvalidationService(queryClient: QueryClient) {
@@ -139,20 +169,32 @@ export function createAcademicInvalidationService(queryClient: QueryClient) {
   }
 
   /**
-   * Invalidates the entire onboarding state for a user.
+   * Invalidates all three onboarding leaf keys for the given user.
    * Called after completeAcademicOnboarding — the full profile, subjects,
-   * and languages are all potentially refreshed by the backend.
+   * and languages are all potentially refreshed by the backend completion step.
+   *
+   * IV-01 FIX: Invalidates the three explicit user-scoped leaf keys rather than
+   * the root `['academic', 'onboarding']` prefix, which would hit all users.
+   * This is user-scoped and deterministic — safe for multi-account scenarios.
    */
   async function afterCompleteOnboarding(userId: string): Promise<void> {
     const id = generateCorrelationId();
     academicTelemetry.cacheInvalidate(
-      'onboarding:all',
+      'onboarding:profile+subjects+languages',
       'completeAcademicOnboarding',
       id,
     );
-    await queryClient.invalidateQueries({
-      queryKey: academicQueryKeys.onboarding(),
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: academicQueryKeys.studentProfile(userId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: academicQueryKeys.studentSubjects(userId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: academicQueryKeys.studentLanguages(userId),
+      }),
+    ]);
   }
 
   /**

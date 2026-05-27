@@ -1,7 +1,49 @@
 {
-  "files": [],
+  "compilerOptions": {
+    "target": "ES2022",
+
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2022"
+    ],
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "jsx": "react-jsx",
+
+    "strict": true,
+
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    "noEmit": true,
+
+    "ignoreDeprecations": "6.0",
+
+    "baseUrl": ".",
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    "types": ["node"],
+
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    "forceConsistentCasingInFileNames": true
+  },
+
+  "include": [
+    "src"
+  ],
+
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    {
+      "path": "./tsconfig.node.json"
+    }
   ]
 }

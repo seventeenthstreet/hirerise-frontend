@@ -1,22 +1,19 @@
 /**
  * src/api/academicOnboardingApi.ts
  *
- * ACADEMIC ONBOARDING — API REPOSITORY
- * ──────────────────────────────────────
+ * ACADEMIC ONBOARDING — API REPOSITORY (HARDENED — Phase 3 Verification Pass)
+ * ─────────────────────────────────────────────────────────────────────────────
  * The ONLY file where Supabase RPC calls for academic onboarding live.
  * All functions return typed RpcResult<T>.
  *
- * LIVE RPCs (Phase 2 / 2B):
- *  - fn_create_student_academic_profile(...)
- *  - fn_get_student_full_profile()
- *  - fn_save_student_subjects(p_subject_ids)
- *  - fn_save_student_languages(p_medium_language_ids, p_additional_language_ids)
- *  - fn_complete_academic_onboarding()
+ * CHANGES FROM ORIGINAL:
+ *  RQ-01 / EX-01: `getStudentFullProfile` now accepts an optional AbortSignal
+ *  parameter and forwards it to executeRpc. This threads the cancellation chain
+ *  from React Query → hook → API → executor → Supabase race.
  *
- * REPLAY SAFETY:
- *  The backend RPCs are designed to be idempotent — calling them multiple times
- *  with the same payload produces the same result. The `was_replay` flag in
- *  create/complete responses lets the UI distinguish first-run from resume.
+ *  Mutation API functions (createAcademicProfile, saveStudentSubjects,
+ *  saveStudentLanguages, completeAcademicOnboarding) do NOT accept signals —
+ *  mutations are never cancelled mid-flight by React Query. Correct.
  *
  * ARCHITECTURE POSITION:
  *   [THIS FILE] ← only Supabase RPC calls for onboarding
@@ -72,6 +69,7 @@ export async function createAcademicProfile(
       p_stream_id:    payload.stream_id,
       p_class_level:  payload.class_level,
     },
+    // No signal — mutations are never cancelled by React Query
   );
 }
 
@@ -85,10 +83,21 @@ export async function createAcademicProfile(
  *
  * RPC: fn_get_student_full_profile()
  * Auth: uses current Supabase session — no userId param needed (RLS-scoped).
+ *
+ * @param signal  Optional AbortSignal from React Query's queryFn context.
+ *                Forwarded to executeRpc to enable in-flight cancellation.
  */
-export async function getStudentFullProfile(): Promise<RpcResult<StudentFullProfile>> {
+export async function getStudentFullProfile(
+  signal?: AbortSignal,
+): Promise<RpcResult<StudentFullProfile>> {
   const client = getSupabaseClient();
-  return executeRpc<StudentFullProfile>(client, 'fn_get_student_full_profile');
+  return executeRpc<StudentFullProfile>(
+    client,
+    'fn_get_student_full_profile',
+    undefined,
+    undefined,
+    signal,              // RQ-01 / EX-01: cancellation chain completed
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

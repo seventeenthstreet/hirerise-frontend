@@ -484,3 +484,329 @@ export interface OnboardingScoringPayload {
   /** True when all completable steps are done. The engine only scores complete sessions. */
   readonly isComplete:     boolean;
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPOSURE STEP — ACTIVITY TYPES & CONSTANTS
+// Used by exposure-step.tsx (Step 5).
+// Mirror of: backend EXPOSURE_ACTIVITIES constant.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * All valid activity identifiers for the Exposure & Activities step.
+ * 'none' is a sentinel value meaning the student has no outside activities yet.
+ */
+export const EXPOSURE_ACTIVITY_IDS = [
+  'sports',
+  'music',
+  'arts',
+  'coding',
+  'debate',
+  'community_service',
+  'entrepreneurship',
+  'writing',
+  'science_olympiad',
+  'dance',
+  'drama',
+  'environment',
+  'none',
+] as const;
+
+export type ExposureActivityId = (typeof EXPOSURE_ACTIVITY_IDS)[number];
+
+/**
+ * Display metadata for each exposure activity tile.
+ * emoji and label are used directly in the step UI.
+ */
+export interface ExposureActivity {
+  readonly id:    ExposureActivityId;
+  readonly emoji: string;
+  readonly label: string;
+}
+
+export const EXPOSURE_ACTIVITIES: readonly ExposureActivity[] = [
+  { id: 'sports',           emoji: '⚽', label: 'Sports & Athletics' },
+  { id: 'music',            emoji: '🎵', label: 'Music & Performance' },
+  { id: 'arts',             emoji: '🎨', label: 'Visual Arts & Craft' },
+  { id: 'coding',           emoji: '💻', label: 'Coding & Technology' },
+  { id: 'debate',           emoji: '🗣️', label: 'Debate & Public Speaking' },
+  { id: 'community_service',emoji: '🤝', label: 'Community Service' },
+  { id: 'entrepreneurship', emoji: '🚀', label: 'Entrepreneurship & Business' },
+  { id: 'writing',          emoji: '✍️', label: 'Writing & Journalism' },
+  { id: 'science_olympiad', emoji: '🔬', label: 'Science & Olympiads' },
+  { id: 'dance',            emoji: '💃', label: 'Dance & Movement' },
+  { id: 'drama',            emoji: '🎭', label: 'Drama & Theatre' },
+  { id: 'environment',      emoji: '🌿', label: 'Environment & Sustainability' },
+  { id: 'none',             emoji: '🙅', label: 'None of the above yet' },
+] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINANCIAL STEP — BUDGET & FLEXIBILITY TYPES & CONSTANTS
+// Used by financial-step.tsx (Step 6).
+// Mirror of: backend EDUCATION_BUDGET_OPTIONS, LOAN_OPENNESS_OPTIONS,
+//            RELOCATION_OPTIONS constants.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Education budget range identifier values.
+ * Framed as "comfort levels" in the UI — never as income brackets.
+ */
+export const EDUCATION_BUDGET_VALUES = [
+  'under_1l',
+  '1l_3l',
+  '3l_7l',
+  '7l_15l',
+  'above_15l',
+] as const;
+
+export type EducationBudget = (typeof EDUCATION_BUDGET_VALUES)[number];
+
+/**
+ * Display option for an education budget tier.
+ */
+export interface EducationBudgetOption {
+  readonly value:       EducationBudget;
+  readonly label:       string;
+  readonly description: string;
+}
+
+export const EDUCATION_BUDGET_OPTIONS: readonly EducationBudgetOption[] = [
+  {
+    value:       'under_1l',
+    label:       'Under ₹1 lakh / year',
+    description: 'Government colleges, scholarships, and fully-funded programmes',
+  },
+  {
+    value:       '1l_3l',
+    label:       '₹1–3 lakh / year',
+    description: 'State private colleges and mid-tier institutions',
+  },
+  {
+    value:       '3l_7l',
+    label:       '₹3–7 lakh / year',
+    description: 'Quality private colleges and professional programmes',
+  },
+  {
+    value:       '7l_15l',
+    label:       '₹7–15 lakh / year',
+    description: 'Top private universities and premium programmes',
+  },
+  {
+    value:       'above_15l',
+    label:       '₹15 lakh+ / year',
+    description: 'Premier institutions and international pathways',
+  },
+] as const;
+
+/**
+ * Student's openness to education loans.
+ */
+export const LOAN_OPENNESS_VALUES = [
+  'open',
+  'maybe',
+  'not_open',
+  'already_planned',
+] as const;
+
+export type LoanOpenness = (typeof LOAN_OPENNESS_VALUES)[number];
+
+export interface LoanOpennessOption {
+  readonly value: LoanOpenness;
+  readonly label: string;
+}
+
+export const LOAN_OPENNESS_OPTIONS: readonly LoanOpennessOption[] = [
+  { value: 'open',           label: 'Open to loans if needed' },
+  { value: 'maybe',          label: "Maybe, if it's worth it" },
+  { value: 'not_open',       label: 'Prefer to avoid loans' },
+  { value: 'already_planned', label: 'Already have a plan' },
+] as const;
+
+/**
+ * Geographic flexibility for study or work location.
+ */
+export const RELOCATION_VALUES = [
+  'local_only',
+  'same_state',
+  'anywhere_india',
+  'open_abroad',
+] as const;
+
+export type RelocationFlexibility = (typeof RELOCATION_VALUES)[number];
+
+export interface RelocationOption {
+  readonly value: RelocationFlexibility;
+  readonly label: string;
+}
+
+export const RELOCATION_OPTIONS: readonly RelocationOption[] = [
+  { value: 'local_only',    label: 'My city / district only' },
+  { value: 'same_state',    label: 'Within my state' },
+  { value: 'anywhere_india', label: 'Anywhere in India' },
+  { value: 'open_abroad',   label: 'Open to abroad' },
+] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INTERESTS STEP — CARD TYPES & CONSTANTS
+// Used by interests-step.tsx (Step 3).
+// Mirror of: backend INTEREST_CARDS constant.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Interest cluster identifiers — the six motivational domains.
+ * Cards are mapped to clusters to compute a dominant interest profile.
+ */
+export const INTEREST_CLUSTER_VALUES = [
+  'analytical',
+  'creative',
+  'technical',
+  'entrepreneurial',
+  'investigative',
+  'social',
+] as const;
+
+export type InterestCluster = (typeof INTEREST_CLUSTER_VALUES)[number];
+
+/**
+ * All valid card identifiers for the Interest Discovery step.
+ */
+export const INTEREST_CARD_IDS = [
+  'solving_puzzles',
+  'building_apps',
+  'writing_stories',
+  'managing_projects',
+  'helping_people',
+  'designing_products',
+  'analysing_data',
+  'starting_businesses',
+  'researching_science',
+  'making_art',
+  'teaching_others',
+  'fixing_systems',
+  'creating_videos',
+  'planning_events',
+  'exploring_nature',
+  'debating_ideas',
+  'making_music',
+  'coding_games',
+  'doing_experiments',
+  'organising_teams',
+] as const;
+
+export type InterestCardId = (typeof INTEREST_CARD_IDS)[number];
+
+/**
+ * Display metadata for an interest card tile.
+ */
+export interface InterestCard {
+  readonly id:      InterestCardId;
+  readonly emoji:   string;
+  readonly label:   string;
+  readonly cluster: InterestCluster;
+}
+
+export const INTEREST_CARDS: readonly InterestCard[] = [
+  { id: 'solving_puzzles',    emoji: '🧩', label: 'Solving Puzzles',        cluster: 'analytical'      },
+  { id: 'building_apps',      emoji: '📱', label: 'Building Apps',          cluster: 'technical'       },
+  { id: 'writing_stories',    emoji: '📖', label: 'Writing Stories',        cluster: 'creative'        },
+  { id: 'managing_projects',  emoji: '📋', label: 'Managing Projects',      cluster: 'entrepreneurial' },
+  { id: 'helping_people',     emoji: '🤗', label: 'Helping People',         cluster: 'social'          },
+  { id: 'designing_products', emoji: '🎨', label: 'Designing Products',     cluster: 'creative'        },
+  { id: 'analysing_data',     emoji: '📊', label: 'Analysing Data',         cluster: 'analytical'      },
+  { id: 'starting_businesses',emoji: '🚀', label: 'Starting Businesses',    cluster: 'entrepreneurial' },
+  { id: 'researching_science',emoji: '🔬', label: 'Researching Science',    cluster: 'investigative'   },
+  { id: 'making_art',         emoji: '🖼️', label: 'Making Art',             cluster: 'creative'        },
+  { id: 'teaching_others',    emoji: '🎓', label: 'Teaching Others',        cluster: 'social'          },
+  { id: 'fixing_systems',     emoji: '⚙️', label: 'Fixing Systems',         cluster: 'technical'       },
+  { id: 'creating_videos',    emoji: '🎬', label: 'Creating Videos',        cluster: 'creative'        },
+  { id: 'planning_events',    emoji: '🗓️', label: 'Planning Events',        cluster: 'entrepreneurial' },
+  { id: 'exploring_nature',   emoji: '🌿', label: 'Exploring Nature',       cluster: 'investigative'   },
+  { id: 'debating_ideas',     emoji: '🗣️', label: 'Debating Ideas',         cluster: 'analytical'      },
+  { id: 'making_music',       emoji: '🎵', label: 'Making Music',           cluster: 'creative'        },
+  { id: 'coding_games',       emoji: '🎮', label: 'Coding Games',           cluster: 'technical'       },
+  { id: 'doing_experiments',  emoji: '🧪', label: 'Doing Experiments',      cluster: 'investigative'   },
+  { id: 'organising_teams',   emoji: '👥', label: 'Organising Teams',       cluster: 'social'          },
+] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEARNING STYLE STEP — SCENARIO TYPES & CONSTANTS
+// Used by learning-style-step.tsx (Step 4).
+// Mirror of: backend LEARNING_STYLE_SCENARIOS constant.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A single captured response from the Learning Style step.
+ * Stored as an array in the step's onComplete payload.
+ */
+export interface LearningStyleResponse {
+  readonly scenarioId: string;
+  readonly response:   string;
+}
+
+/**
+ * A single response option within a learning style scenario.
+ */
+export interface LearningStyleOption {
+  readonly value: string;
+  readonly label: string;
+}
+
+/**
+ * A single scenario card shown in the Learning Style step.
+ */
+export interface LearningStyleScenario {
+  readonly id:       string;
+  readonly question: string;
+  readonly options:  readonly LearningStyleOption[];
+}
+
+export const LEARNING_STYLE_SCENARIOS: readonly LearningStyleScenario[] = [
+  {
+    id: 'problem_approach',
+    question: 'When you face a hard problem, what do you usually do first?',
+    options: [
+      { value: 'research_first', label: 'Research and gather information' },
+      { value: 'try_and_learn',  label: 'Jump in and try things out' },
+      { value: 'ask_for_help',   label: 'Talk it through with someone' },
+      { value: 'keep_going',     label: 'Push through until it clicks' },
+    ],
+  },
+  {
+    id: 'project_style',
+    question: 'When working on a long project, which describes you best?',
+    options: [
+      { value: 'structured_plan',   label: 'I make a detailed plan upfront' },
+      { value: 'open_creative',     label: 'I like to explore as I go' },
+      { value: 'loose_guidelines',  label: 'I work best with loose guidelines' },
+      { value: 'change_approach',   label: 'I adapt my approach as I learn more' },
+    ],
+  },
+  {
+    id: 'learning_preference',
+    question: 'How do you best absorb new information?',
+    options: [
+      { value: 'research_first', label: 'Reading and researching in depth' },
+      { value: 'try_and_learn',  label: 'Hands-on practice and experimentation' },
+      { value: 'one_on_one',     label: 'Discussion and explanation from others' },
+      { value: 'structured_plan', label: 'Structured lessons with clear steps' },
+    ],
+  },
+  {
+    id: 'sharing_work',
+    question: 'When sharing your work or ideas with others, you prefer…',
+    options: [
+      { value: 'presenting', label: 'A formal presentation with data' },
+      { value: 'showing',    label: 'Showing a live demo or prototype' },
+      { value: 'one_on_one', label: 'A one-on-one conversation' },
+      { value: 'seek_guidance', label: 'Getting feedback before sharing widely' },
+    ],
+  },
+  {
+    id: 'challenge_response',
+    question: 'When something isn\'t working, you typically…',
+    options: [
+      { value: 'research_first',  label: 'Stop and diagnose systematically' },
+      { value: 'change_approach', label: 'Try a completely different approach' },
+      { value: 'seek_guidance',   label: 'Seek guidance from someone more experienced' },
+      { value: 'keep_going',      label: 'Keep iterating until it works' },
+    ],
+  },
+] as const;
