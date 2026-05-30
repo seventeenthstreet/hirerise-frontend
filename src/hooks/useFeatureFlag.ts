@@ -167,6 +167,14 @@ export function useFeatureFlagVariant(flagKey: FlagKey): string | null {
     // evaluateFlagVariant is called WITHOUT onExposure callback here.
     // Exposure is fired separately in the effect below to keep concerns clean.
     const resolved = evaluateFlagVariant(flagKey, flagContext, undefined);
+    // Variant state is authoritative: downstream effects (the exposure-firing
+    // effect) depend on a stable `variant` value to determine whether
+    // exposure has already been recorded. Derivation at render time is
+    // impossible because evaluation must be gated on `remoteReady`, which
+    // is set by an async promise resolution (whenRemoteFlagsReady). The
+    // effect ensures evaluation only runs after both hydration and remote
+    // flag config are committed — not during the render pass.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVariant(resolved);
   }, [flagKey, user, isHydrated, remoteReady]);
 

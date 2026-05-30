@@ -1,4 +1,3 @@
-
 /**
  * @file src/components/debug/HydrationDebugOverlay.tsx
  *
@@ -99,6 +98,13 @@ export function HydrationDebugOverlay() {
   }, []);
 
   useEffect(() => {
+    // Debug-only hydration monitor: refresh() reads from the observability
+    // ring buffer and telemetry snapshot, then calls setEvents/setTelemetry
+    // to drive the overlay UI. State updates are intentional — this component
+    // exists solely to display live-updating debug state. The initial call
+    // populates the overlay immediately; the interval keeps it current.
+    // A refactor (e.g. storing in a ref) would defeat the rendering purpose.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     const id = setInterval(refresh, 1_500);
     return () => clearInterval(id);

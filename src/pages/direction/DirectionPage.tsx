@@ -75,6 +75,14 @@ export default function DirectionPage() {
   //   behavior as before, just delayed one commit cycle (imperceptible).
   const [guardReady, setGuardReady] = useState(false);
   useEffect(() => {
+    // Post-commit guard: guardReady must be set in an effect — not at render
+    // time — so the alreadyHasDirection check is only evaluated after React
+    // has committed all pending state updates (including the enqueued
+    // setUser(null) from refreshUser() during direction-switch). Evaluating
+    // it during render would read stale pre-commit user state and trigger a
+    // spurious redirect loop. The cleanup resets to false so StrictMode's
+    // double-invoke starts from a safe baseline on the second mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGuardReady(true);
     return () => { setGuardReady(false); };
   }, []);

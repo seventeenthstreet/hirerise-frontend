@@ -196,6 +196,13 @@ export function useOnboarding(): UseOnboardingReturn {
   // After that, goToStep takes over local navigation.
   useEffect(() => {
     if (query.data?.currentStep && localCurrentStep === null) {
+      // One-time initialization from server state: seeds localCurrentStep
+      // with the server-provided currentStep on first successful fetch.
+      // After seeding, goToStep owns all local navigation — the null guard
+      // ensures this fires exactly once. Render-time derivation is
+      // impossible because the value arrives asynchronously via React Query
+      // and must not pollute the render path with query-loading logic.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalCurrentStep(query.data.currentStep);
     }
   }, [query.data?.currentStep, localCurrentStep]);

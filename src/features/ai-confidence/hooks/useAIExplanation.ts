@@ -91,6 +91,14 @@ export function useAIExplanation({
     // evaluateFlag is synchronous — no flicker risk.
     const flagEnabled = _isAugmentationEnabled();
     if (!flagEnabled || !assessmentId || !confidenceTier) {
+      // Initialization guard: resets result to a safe null state when the
+      // feature flag is off or required inputs are absent. This cannot be
+      // derived at render time — the flag is evaluated synchronously but
+      // only after the effect runs (post-commit), ensuring the flag check
+      // sees the fully committed user/hydration state. Storing the result
+      // in state is authoritative because downstream rendering depends on
+      // the stable AIExplanationResult shape for conditional display.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResult({ narrative: null, isFallback: false, isLoading: false, tier: confidenceTier ?? null });
       return;
     }
