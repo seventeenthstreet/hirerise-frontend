@@ -1,0 +1,579 @@
+/**
+ * academics.css
+ * Styles for the Academics onboarding step (Phase 3A).
+ *
+ * Uses the design tokens defined in globals.css:
+ *   --primary, --muted, --muted-foreground, --border,
+ *   --card, --card-foreground, --foreground, --background,
+ *   --destructive, --success, --radius
+ *
+ * BEM blocks:
+ *   .academics-step
+ *   .academic-progress-indicator
+ *   .academic-year-navigator
+ *   .academic-year-card
+ *   .subject-marks-input
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACADEMICS STEP — top-level wrapper
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.academics-step {
+  display:        flex;
+  flex-direction: column;
+  gap:            1.5rem;
+  width:          100%;
+  max-width:      42rem;
+  margin:         0 auto;
+  padding:        0 0 2rem;
+}
+
+.academics-step--loading {
+  min-height: 300px;
+  align-items: center;
+  justify-content: center;
+}
+
+.academics-step__skeleton {
+  width:         100%;
+  height:        200px;
+  border-radius: var(--radius);
+  background:    linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--border)) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation:       skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.academics-step--error {
+  padding:       2rem;
+  text-align:    center;
+  border:        1px solid hsl(var(--destructive) / 0.3);
+  border-radius: var(--radius);
+  background:    hsl(var(--destructive) / 0.05);
+  color:         hsl(var(--destructive));
+}
+
+.academics-step__retry-btn {
+  display:          inline-flex;
+  align-items:      center;
+  padding:          0.5rem 1.25rem;
+  border:           1px solid hsl(var(--destructive) / 0.5);
+  border-radius:    var(--radius);
+  background:       transparent;
+  color:            hsl(var(--destructive));
+  font-size:        0.875rem;
+  font-weight:      500;
+  cursor:           pointer;
+  transition:       background 0.15s;
+}
+.academics-step__retry-btn:hover {
+  background: hsl(var(--destructive) / 0.08);
+}
+
+/* ── Footer ── */
+.academics-step__footer {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.75rem;
+  padding-top:    0.5rem;
+}
+
+.academics-step__submit-error {
+  font-size:  0.875rem;
+  color:      hsl(var(--destructive));
+  margin:     0;
+}
+
+.academics-step__continue-btn {
+  display:          inline-flex;
+  align-items:      center;
+  justify-content:  center;
+  width:            100%;
+  padding:          0.75rem 1.5rem;
+  border:           none;
+  border-radius:    var(--radius);
+  background:       hsl(var(--primary));
+  color:            hsl(var(--primary-foreground));
+  font-size:        1rem;
+  font-weight:      600;
+  letter-spacing:   0.01em;
+  cursor:           pointer;
+  transition:       opacity 0.15s, transform 0.1s;
+}
+.academics-step__continue-btn:hover:not(:disabled) {
+  opacity:   0.92;
+  transform: translateY(-1px);
+}
+.academics-step__continue-btn:disabled {
+  opacity: 0.45;
+  cursor:  not-allowed;
+}
+
+.academics-step__hint {
+  font-size:   0.8125rem;
+  color:       hsl(var(--muted-foreground));
+  text-align:  center;
+  margin:      0;
+  line-height: 1.5;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACADEMIC PROGRESS INDICATOR
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.academic-progress-indicator {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  flex-wrap:       wrap;
+  gap:             0.75rem;
+  padding:         0.875rem 1rem;
+  border-radius:   var(--radius);
+  background:      hsl(var(--muted));
+  border:          1px solid hsl(var(--border));
+}
+
+.academic-progress-indicator__stats {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+  font-size:   0.9375rem;
+  color:       hsl(var(--muted-foreground));
+}
+
+.academic-progress-indicator__stat strong {
+  color:       hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.academic-progress-indicator__divider {
+  color: hsl(var(--border));
+}
+
+.academic-progress-indicator__badge {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           0.375rem;
+  padding:       0.3125rem 0.75rem;
+  border-radius: 99px;
+  font-size:     0.8125rem;
+  font-weight:   500;
+}
+
+.academic-progress-indicator__badge--sufficient {
+  background: hsl(var(--success) / 0.12);
+  color:      hsl(var(--success));
+  border:     1px solid hsl(var(--success) / 0.3);
+}
+
+.academic-progress-indicator__badge--insufficient {
+  background: hsl(var(--warning) / 0.1);
+  color:      hsl(var(--warning));
+  border:     1px solid hsl(var(--warning) / 0.3);
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACADEMIC YEAR NAVIGATOR — horizontal tab strip
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.academic-year-navigator {
+  display:          flex;
+  gap:              0.375rem;
+  overflow-x:       auto;
+  padding-bottom:   0.25rem;
+  scrollbar-width:  none;       /* Firefox */
+}
+.academic-year-navigator::-webkit-scrollbar { display: none; }
+
+.academic-year-navigator__tab {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            0.375rem;
+  padding:        0.5rem 1rem;
+  border:         1px solid hsl(var(--border));
+  border-radius:  var(--radius);
+  background:     hsl(var(--card));
+  color:          hsl(var(--muted-foreground));
+  font-size:      0.875rem;
+  font-weight:    500;
+  white-space:    nowrap;
+  cursor:         pointer;
+  transition:     background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink:    0;
+}
+.academic-year-navigator__tab:hover {
+  background:   hsl(var(--muted));
+  color:        hsl(var(--foreground));
+}
+
+.academic-year-navigator__tab--active {
+  background:   hsl(var(--primary));
+  color:        hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.academic-year-navigator__tab--active:hover {
+  background: hsl(var(--primary));
+  color:      hsl(var(--primary-foreground));
+  opacity:    0.92;
+}
+
+.academic-year-navigator__tab--complete {
+  border-color: hsl(var(--success) / 0.5);
+}
+
+.academic-year-navigator__tab--partial {
+  border-color: hsl(var(--warning) / 0.5);
+}
+
+.academic-year-navigator__label {
+  /* just text */
+}
+
+.academic-year-navigator__dot {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  width:           1.125rem;
+  height:          1.125rem;
+  border-radius:   50%;
+  font-size:       0.6875rem;
+  font-weight:     700;
+}
+
+.academic-year-navigator__dot--complete {
+  background: hsl(var(--success) / 0.15);
+  color:      hsl(var(--success));
+}
+
+.academic-year-navigator__dot--partial {
+  background: hsl(var(--warning) / 0.15);
+  color:      hsl(var(--warning));
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ACADEMIC YEAR CARD
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.academic-year-card {
+  display:        flex;
+  flex-direction: column;
+  gap:            1.25rem;
+  padding:        1.25rem;
+  border:         1px solid hsl(var(--border));
+  border-radius:  calc(var(--radius) * 1.25);
+  background:     hsl(var(--card));
+}
+
+/* ── Header row ── */
+.academic-year-card__header {
+  display:     flex;
+  align-items: center;
+  flex-wrap:   wrap;
+  gap:         0.75rem;
+}
+
+.academic-year-card__title {
+  font-size:   1.125rem;
+  font-weight: 600;
+  color:       hsl(var(--card-foreground));
+  margin:      0;
+  flex:        1 1 auto;
+}
+
+.academic-year-card__board-label {
+  font-size:   0.8125rem;
+  color:       hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+.academic-year-card__board-select {
+  padding:       0.375rem 0.625rem;
+  border:        1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background:    hsl(var(--background));
+  color:         hsl(var(--foreground));
+  font-size:     0.875rem;
+  cursor:        pointer;
+  outline:       none;
+  transition:    border-color 0.15s;
+}
+.academic-year-card__board-select:focus {
+  border-color: hsl(var(--ring));
+  box-shadow:   0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+.academic-year-card__predicted-toggle {
+  display:     flex;
+  align-items: center;
+  gap:         0.4rem;
+  font-size:   0.875rem;
+  color:       hsl(var(--muted-foreground));
+  cursor:      pointer;
+  user-select: none;
+}
+.academic-year-card__predicted-toggle input[type="checkbox"] {
+  width:  1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: hsl(var(--primary));
+}
+
+/* ── Subject list ── */
+.academic-year-card__subjects {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.75rem;
+}
+
+.academic-year-card__empty {
+  font-size:  0.9rem;
+  color:      hsl(var(--muted-foreground));
+  margin:     0;
+  padding:    1rem;
+  text-align: center;
+  border:     1px dashed hsl(var(--border));
+  border-radius: var(--radius);
+  background: hsl(var(--muted) / 0.4);
+}
+
+/* ── Add subject ── */
+.academic-year-card__add-subject {
+  position: relative;
+}
+
+.academic-year-card__add-btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           0.3rem;
+  padding:       0.5rem 1rem;
+  border:        1px dashed hsl(var(--primary) / 0.5);
+  border-radius: var(--radius);
+  background:    hsl(var(--primary) / 0.05);
+  color:         hsl(var(--primary));
+  font-size:     0.875rem;
+  font-weight:   500;
+  cursor:        pointer;
+  transition:    background 0.15s, border-color 0.15s;
+}
+.academic-year-card__add-btn:hover {
+  background:   hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.7);
+}
+
+.academic-year-card__subject-picker {
+  position:      absolute;
+  top:           calc(100% + 0.375rem);
+  left:          0;
+  z-index:       20;
+  display:       flex;
+  flex-direction: column;
+  width:         min(280px, 90vw);
+  max-height:    220px;
+  overflow-y:    auto;
+  border:        1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background:    hsl(var(--card));
+  box-shadow:    0 8px 24px hsl(0 0% 0% / 0.1);
+  padding:       0.375rem;
+  gap:           0.125rem;
+}
+
+.academic-year-card__subject-option {
+  padding:       0.5rem 0.75rem;
+  text-align:    left;
+  border:        none;
+  border-radius: calc(var(--radius) * 0.75);
+  background:    transparent;
+  color:         hsl(var(--foreground));
+  font-size:     0.875rem;
+  cursor:        pointer;
+  transition:    background 0.1s;
+}
+.academic-year-card__subject-option:hover {
+  background: hsl(var(--muted));
+}
+
+.academic-year-card__all-added {
+  padding:    0.75rem;
+  text-align: center;
+  font-size:  0.875rem;
+  color:      hsl(var(--muted-foreground));
+  margin:     0;
+}
+
+/* ── Save footer ── */
+.academic-year-card__footer {
+  display:    flex;
+  align-items: center;
+  gap:        0.75rem;
+  flex-wrap:  wrap;
+}
+
+.academic-year-card__error {
+  font-size: 0.8125rem;
+  color:     hsl(var(--destructive));
+  margin:    0;
+  flex:      1 1 100%;
+}
+
+.academic-year-card__save-btn {
+  display:       inline-flex;
+  align-items:   center;
+  padding:       0.4375rem 1rem;
+  border:        1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background:    hsl(var(--muted));
+  color:         hsl(var(--foreground));
+  font-size:     0.875rem;
+  font-weight:   500;
+  cursor:        pointer;
+  transition:    background 0.15s;
+}
+.academic-year-card__save-btn:hover:not(:disabled) {
+  background: hsl(var(--border));
+}
+.academic-year-card__save-btn:disabled {
+  opacity: 0.5;
+  cursor:  not-allowed;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUBJECT MARKS INPUT ROW
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.subject-marks-input {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.625rem;
+  padding:        0.875rem;
+  border:         1px solid hsl(var(--border));
+  border-radius:  var(--radius);
+  background:     hsl(var(--background));
+}
+
+/* ── Header ── */
+.subject-marks-input__header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+}
+
+.subject-marks-input__name {
+  font-size:   0.9375rem;
+  font-weight: 600;
+  color:       hsl(var(--foreground));
+}
+
+.subject-marks-input__remove {
+  display:          inline-flex;
+  align-items:      center;
+  justify-content:  center;
+  width:            1.625rem;
+  height:           1.625rem;
+  border:           none;
+  border-radius:    50%;
+  background:       transparent;
+  color:            hsl(var(--muted-foreground));
+  font-size:        0.75rem;
+  cursor:           pointer;
+  transition:       background 0.12s, color 0.12s;
+}
+.subject-marks-input__remove:hover {
+  background: hsl(var(--destructive) / 0.1);
+  color:      hsl(var(--destructive));
+}
+
+/* ── Marks row ── */
+.subject-marks-input__marks-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.5rem;
+  flex-wrap:   wrap;
+}
+
+.subject-marks-input__field {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.2rem;
+  font-size:      0.8rem;
+  color:          hsl(var(--muted-foreground));
+  font-weight:    500;
+}
+
+.subject-marks-input__number {
+  width:         5rem;
+  padding:       0.375rem 0.5rem;
+  border:        1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  background:    hsl(var(--card));
+  color:         hsl(var(--foreground));
+  font-size:     0.9375rem;
+  text-align:    center;
+  outline:       none;
+  transition:    border-color 0.15s;
+  /* Remove spinner arrows */
+  -moz-appearance:    textfield;
+  appearance:         textfield;
+}
+.subject-marks-input__number::-webkit-outer-spin-button,
+.subject-marks-input__number::-webkit-inner-spin-button { display: none; }
+.subject-marks-input__number:focus {
+  border-color: hsl(var(--ring));
+  box-shadow:   0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+.subject-marks-input__divider {
+  font-size:  0.8rem;
+  color:      hsl(var(--muted-foreground));
+  padding-top: 1.2rem; /* align with input baseline */
+}
+
+/* ── Per-subject predicted toggle ── */
+.subject-marks-input__predicted {
+  display:     flex;
+  align-items: center;
+  gap:         0.4rem;
+  font-size:   0.8125rem;
+  color:       hsl(var(--muted-foreground));
+  cursor:      pointer;
+  user-select: none;
+}
+.subject-marks-input__predicted input[type="checkbox"] {
+  width:  0.9rem;
+  height: 0.9rem;
+  cursor: pointer;
+  accent-color: hsl(var(--primary));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE TWEAKS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .academic-progress-indicator {
+    flex-direction: column;
+    align-items:    flex-start;
+  }
+
+  .academic-year-card__header {
+    gap: 0.5rem;
+  }
+
+  .subject-marks-input__marks-row {
+    gap: 0.375rem;
+  }
+}

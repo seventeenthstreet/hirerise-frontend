@@ -1,120 +1,115 @@
-// hooks/useCareerHealth.ts — FIXED
-//
-// ROOT CAUSE: Backend returns { success: true, data: { careerHealth: {...} } }
-// The apiClient unwraps the outer envelope, giving: { careerHealth: {...} }
-// But the hook typed the result as CareerHealthResponse (flat), so:
-//   data.chiScore → undefined (it's actually data.careerHealth.chiScore)
-//   data.skillGaps → undefined
-//   data.isReady → undefined (always falsy → shows "still computing" forever)
-//
-// FIX: Unwrap the nested careerHealth key after the apiFetch call.
-// Backend controller returns: { success: true, data: { careerHealth: { chiScore, ... } } }
-// apiClient strips { success, data } → hook receives: { careerHealth: { chiScore, ... } }
-// We extract .careerHealth to get the flat CareerHealthResponse.
+/**
+ * hooks/useCareerHealth.ts
+ *
+ * Fetches GET /api/v1/career-health — Career Health Index (CHI) score +
+ * snapshot data. Used by the CHI widget on the dashboard.
+ *
+ * CHI dependencies (must all be true for a non-null score):
+ *   - resume_uploaded = true
+ *   - skills in profile
+ *   - target_role set
+ *
+ * v2 — React Query migration (Phase 2)
+ * v2.1 — Hardening (Phase 2.5):
+ *  - Removed `meta: { onError }`. React Query v5 does not call meta.onError
+ *    automatically — it was a no-op. The onError option is forwarded via a
+ *    stable useEffect that watches query.error, which is the correct v5 pattern.
+ *  - `select` added to project raw API response into the { chiScore, chiSnapshot }
+ *    shape so the component receives pre-shaped data and re-renders only when
+ *    the relevant fields change (not on unrelated response key changes).
+ *  - `refetch` now calls query.refetch() directly instead of invalidateQueries.
+ *    invalidateQueries marks all subscribers stale and triggers background
+ *    refetch — appropriate for cross-hook invalidation. query.refetch() is the
+ *    correct API for "reload this specific query immediately" from a UI action.
+ */
 
-'use client';
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
+import type { ApiClientError } from '@/lib/api/core';
+import { queryKeys } from '@/lib/query';
+import { useAppContext } from '@/context/AppContext';
 
-import { useQuery, useQueryClient }      from '@tanstack/react-query';
-import { useState, useEffect }           from 'react';
-import { apiFetch, apiFetchWithStatus }  from '@/services/apiClient';
-import { useAiJobPoller }                from './useAiJobPoller';
-import type { CareerHealthResponse }     from '@/types/careerHealth';
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-/** Exported so other hooks can invalidate after upload or job completion */
-export const CAREER_HEALTH_KEY = ['career-health'] as const;
-
-/** Shape the backend actually returns after apiClient envelope strip */
-interface ChiApiResponse {
-  careerHealth: CareerHealthResponse & { jobId?: string };
+export interface CHISnapshot {
+  topSkills?: Array<{ id: string; name: string; score: number }>;
+  gaps?: Array<{ id: string; name: string; priority: 'high' | 'medium' | 'low' }>;
+  lastUpdated?: string;
+  version?: number;
 }
 
-/**
- * useCareerHealth()
- *
- * Fetches the Career Health Index for the current user.
- * Handles the async processing state — if the backend returns 202,
- * starts polling via useAiJobPoller.
- *
- * Returns a safe empty state (isReady: false) when no CHI exists yet,
- * preventing dashboard cards from showing error states.
- */
-export function useCareerHealth() {
-  const queryClient = useQueryClient();
-  const [pollingJobId, setPollingJobId] = useState<string | null>(null);
+/** Raw shape returned by GET /api/v1/career-health */
+interface CareerHealthResponse {
+  score:    number | null;
+  snapshot: CHISnapshot | null;
+}
 
-  const query = useQuery<CareerHealthResponse>({
-    queryKey: CAREER_HEALTH_KEY,
-    queryFn: async () => {
-      const { data: envelope, status } = await apiFetchWithStatus<ChiApiResponse>(
-        '/career-health'
-      );
+/** Projected shape exposed to callers via select */
+interface CareerHealthSelected {
+  chiScore:    number | null;
+  chiSnapshot: CHISnapshot | null;
+}
 
-      // Unwrap nested key — backend: { data: { careerHealth: {...} } }
-      const chi = envelope?.careerHealth ?? (envelope as unknown as CareerHealthResponse);
+export interface UseCareerHealthOptions {
+  enabled?: boolean;
+  onError?: (err: unknown) => void;
+}
 
-      // If backend is still computing, start polling the job
-      if (status === 202 && chi?.jobId) {
-        setPollingJobId(chi.jobId);
-      }
+export interface UseCareerHealthReturn {
+  chiScore:    number | null;
+  chiSnapshot: CHISnapshot | null;
+  isLoading:   boolean;
+  isError:     boolean;
+  error:       ApiClientError | null;
+  refetch:     () => void;
+}
 
-      // Ensure safe defaults so components never crash on missing fields
-      return {
-        chiScore:           chi?.chiScore           ?? null,
-        isReady:            chi?.isReady            ?? (chi?.chiScore != null),
-        skillGaps:          chi?.skillGaps          ?? [],
-        salaryBenchmark:    chi?.salaryBenchmark    ?? null,
-        demandMetrics:      chi?.demandMetrics      ?? [],
-        lastCalculated:     chi?.lastCalculated     ?? null,
-        topSkills:          chi?.topSkills          ?? [],
-        detectedProfession: chi?.detectedProfession ?? null,
-        currentJobTitle:    chi?.currentJobTitle    ?? null,
-        automationRisk:     chi?.automationRisk     ?? null,
-        ...(chi?.jobId  ? { jobId:   chi.jobId   } : {}),
-        ...(chi?.status ? { status:  chi.status  } : {}),
-        ...(chi?.pollUrl? { pollUrl: chi.pollUrl } : {}),
-      };
-    },
-    staleTime: 10 * 60 * 1000, // 10 min — expensive AI computation
-    retry: 1,
+// ── Selector ──────────────────────────────────────────────────────────────────
+
+function selectCareerHealth(raw: CareerHealthResponse): CareerHealthSelected {
+  return {
+    chiScore:    raw.score    ?? null,
+    chiSnapshot: raw.snapshot ?? null,
+  };
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
+export function useCareerHealth(options: UseCareerHealthOptions = {}): UseCareerHealthReturn {
+  const { enabled = true, onError } = options;
+
+  // Q-01 (Phase 3A Step 5): Gate on AppContext hydration — same guard as useDashboard.
+  // Prevents firing GET /api/v1/career-health before the auth sequence completes.
+  // Without this guard, the query can fire with an absent or stale token when
+  // the hook is mounted outside the guarded dashboard layout (test, future refactor).
+  const { isHydrated } = useAppContext();
+
+  const query = useQuery<CareerHealthResponse, ApiClientError, CareerHealthSelected>({
+    queryKey: queryKeys.careerHealth.all(),
+    queryFn:  () => apiClient<CareerHealthResponse>({ url: '/api/v1/career-health' }),
+    // Q-01: Both flags must be true — hydration gate + caller opt-out.
+    enabled:  enabled && isHydrated,
+    select:   selectCareerHealth,
   });
 
-  const { data: jobResult } = useAiJobPoller(pollingJobId);
-
+  // Forward errors to the optional caller-supplied handler.
+  // React Query v5 removed onError from useQuery options — the recommended
+  // v5 pattern is a useEffect that watches query.error.
   useEffect(() => {
-    if (jobResult?.status === 'completed') {
-      setPollingJobId(null);
-      queryClient.invalidateQueries({ queryKey: CAREER_HEALTH_KEY });
+    if (query.error && onError) {
+      onError(query.error);
     }
-    if (jobResult?.status === 'failed') {
-      setPollingJobId(null);
-    }
-  }, [jobResult?.status, queryClient]);
+  }, [query.error, onError]);
 
-  return query;
-}
-
-/**
- * useCareerHealthSimple()
- *
- * Lightweight version — no 202 polling. Use on pages that only display
- * existing CHI data.
- */
-export function useCareerHealthSimple() {
-  return useQuery<CareerHealthResponse>({
-    queryKey: CAREER_HEALTH_KEY,
-    queryFn: async () => {
-      const envelope = await apiFetch<ChiApiResponse>('/career-health');
-      const chi = envelope?.careerHealth ?? (envelope as unknown as CareerHealthResponse);
-      return {
-        chiScore:        chi?.chiScore        ?? null,
-        isReady:         chi?.isReady         ?? (chi?.chiScore != null),
-        skillGaps:       chi?.skillGaps       ?? [],
-        salaryBenchmark: chi?.salaryBenchmark ?? null,
-        demandMetrics:   chi?.demandMetrics   ?? [],
-        lastCalculated:  chi?.lastCalculated  ?? null,
-      };
-    },
-    staleTime: 10 * 60 * 1000,
-    retry: 1,
-  });
+  return {
+    chiScore:    query.data?.chiScore    ?? null,
+    chiSnapshot: query.data?.chiSnapshot ?? null,
+    isLoading:   query.isLoading,
+    isError:     query.isError,
+    error:       query.error ?? null,
+    // query.refetch() — correct API for "reload this query now" from a user action.
+    // Bypasses staleTime and fires immediately, scoped to this query only.
+    refetch:     () => { void query.refetch(); },
+  };
 }

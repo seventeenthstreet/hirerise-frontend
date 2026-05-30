@@ -1,89 +1,62 @@
 /**
- * lib/env.ts — Frontend Environment Validator (MIGRATED: Firebase removed)
+ * src/lib/env.ts
  *
- * All FIREBASE_* variables removed.
- * Supabase Auth is now the authentication provider.
+ * Environment variable validation — called once at app startup.
  *
- * Required env vars:
- *   NEXT_PUBLIC_SUPABASE_URL
- *   NEXT_PUBLIC_SUPABASE_ANON_KEY
- *   NEXT_PUBLIC_API_BASE_URL
+ * Fails fast with a clear error message if any required variable is
+ * missing, preventing cryptic runtime failures deep in the call stack.
  *
- * Server-only (API routes):
- *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
+ * Call in the root layout (server side) or in a top-level initializer:
+ *
+ *   import { validateEnv } from '@/lib/env';
+ *   validateEnv();
+ *
+ * This file intentionally has zero dependencies so it can be imported
+ * anywhere without pulling in the Supabase client or other heavy modules.
  */
 
-function required(name: string): string {
-  const val = process.env[name];
-  if (!val || !val.trim()) {
-    throw new Error(`[env] Missing required variable: ${name}\nAdd it to .env.local`);
-  }
-  return val.trim();
-}
+const REQUIRED_ENV_VARS = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  // NEXT_PUBLIC_API_BASE_URL removed from required list.
+  // Browser requests now use relative paths (Next.js proxy) — the env var
+  // is only needed by server-side Route Handlers (API_BASE_URL in .env).
+  // Keeping it optional here prevents startup failures in environments
+  // where only API_BASE_URL is set (e.g. production server containers).
+] as const;
 
-function optional(name: string, defaultValue = ''): string {
-  return process.env[name]?.trim() || defaultValue;
-}
+type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
 
-// ── Client-side environment (safe for browser bundle) ─────────────────────────
+/**
+ * Validates that all required environment variables are present.
+ * Throws a descriptive Error listing every missing variable at once,
+ * rather than failing on the first one.
+ *
+ * Safe to call in both server and client contexts — all required vars
+ * are NEXT_PUBLIC_ and available on both sides.
+ */
+export function validateEnv(): void {
+  const missing: RequiredEnvVar[] = REQUIRED_ENV_VARS.filter(
+    (key) => !process.env[key],
+  );
 
-function buildClientEnv() {
-  return Object.freeze({
-    API_BASE_URL:      required('NEXT_PUBLIC_API_BASE_URL'),
-    APP_URL:           optional('NEXT_PUBLIC_APP_URL', 'http://localhost:3000'),
-    SUPABASE_URL:      required('NEXT_PUBLIC_SUPABASE_URL'),
-    SUPABASE_ANON_KEY: required('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-  });
-}
-
-// ── Server-side environment (API routes only) ─────────────────────────────────
-
-function buildServerEnv() {
-  if (typeof window !== 'undefined') {
+  if (missing.length > 0) {
     throw new Error(
-      '[env] serverEnv accessed in browser. Import only from Next.js API routes.'
+      `[env] Missing required environment variable(s):\n` +
+        missing.map((key) => `  • ${key}`).join('\n') +
+        `\n\nCheck your .env.local file and ensure these are set before starting.`,
     );
   }
-
-  return Object.freeze({
-    SUPABASE_URL:              optional('SUPABASE_URL'),
-    SUPABASE_SERVICE_ROLE_KEY: optional('SUPABASE_SERVICE_ROLE_KEY'),
-    GEMINI_API_KEY:            optional('GEMINI_API_KEY'),
-    GROQ_API_KEY:              optional('GROQ_API_KEY'),
-    MISTRAL_API_KEY:           optional('MISTRAL_API_KEY'),
-    OPENROUTER_API_KEY:        optional('OPENROUTER_API_KEY'),
-    ANTHROPIC_API_KEY:         optional('ANTHROPIC_API_KEY'),
-    GROK_API_KEY:              optional('GROK_API_KEY'),
-  });
 }
 
-// ── Validate and export ───────────────────────────────────────────────────────
-
-let clientEnv: ReturnType<typeof buildClientEnv>;
-let serverEnv: ReturnType<typeof buildServerEnv>;
-
-try {
-  clientEnv = buildClientEnv();
-} catch (err: any) {
-  if (process.env.NODE_ENV === 'production') throw err;
-  console.warn(`[env] ${err.message}`);
-  clientEnv = {
-    API_BASE_URL:      process.env.NEXT_PUBLIC_API_BASE_URL      || 'http://localhost:8080',
-    APP_URL:           process.env.NEXT_PUBLIC_APP_URL            || 'http://localhost:3000',
-    SUPABASE_URL:      process.env.NEXT_PUBLIC_SUPABASE_URL       || '',
-    SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY  || '',
-  } as ReturnType<typeof buildClientEnv>;
+/**
+ * Type-safe accessor for a validated env var.
+ * Use after validateEnv() has confirmed the value is present.
+ */
+export function getEnv(key: RequiredEnvVar): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`[env] ${key} is not set. Did you call validateEnv()?`);
+  }
+  return value;
 }
-
-if (typeof window === 'undefined') {
-  serverEnv = buildServerEnv();
-} else {
-  serverEnv = new Proxy({} as ReturnType<typeof buildServerEnv>, {
-    get(_t, prop) {
-      throw new Error(`[env] serverEnv.${String(prop)} accessed in browser code.`);
-    },
-  });
-}
-
-export { clientEnv, serverEnv };
