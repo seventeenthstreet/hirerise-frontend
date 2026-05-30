@@ -23,7 +23,6 @@ import React from 'react';
 import { SignalCoverageWidget }   from './SignalCoverageWidget';
 import { ClusterStabilityWidget } from './ClusterStabilityWidget';
 import {
-  useIntelligenceQualityReport,
   useClusterStability,
   useClusterDrift,
   useSignalCoverage,

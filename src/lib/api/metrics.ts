@@ -30,11 +30,9 @@ import type {
   MetricFilters,
   OverviewMetrics,
   ResumeFunnelMetrics,
-  StepCompletionBreakdown,
   OnboardingFunnelMetrics,
   PerformanceMetrics,
   ReliabilityMetrics,
-  VariantConversionRow,
   ExperimentMetrics,
 } from './metrics-types';
 
@@ -42,11 +40,9 @@ export type {
   MetricFilters,
   OverviewMetrics,
   ResumeFunnelMetrics,
-  StepCompletionBreakdown,
   OnboardingFunnelMetrics,
   PerformanceMetrics,
   ReliabilityMetrics,
-  VariantConversionRow,
   ExperimentMetrics,
 } from './metrics-types';
 
@@ -251,3 +247,10 @@ export async function getExperimentMetrics(
     signal,
   });
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// RE-EXPORTS FROM metrics-types.ts
+// StepCompletionBreakdown and VariantConversionRow live in metrics-types.ts
+// (the canonical type file). Re-exported here for backward compatibility with
+// existing imports from @/lib/api/metrics.
+// ─────────────────────────────────────────────────────────────────────────────
+export type { StepCompletionBreakdown, VariantConversionRow } from './metrics-types';

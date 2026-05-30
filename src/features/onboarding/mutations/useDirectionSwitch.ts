@@ -34,18 +34,17 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/context/AppContext';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from '@/lib/query';
-import type { User } from '@/hooks/useUser';
 import type { UseOnboardingDirectionSwitchReturn } from '@/features/onboarding/types';
 
 export type { UseOnboardingDirectionSwitchReturn };
 
 export function useDirectionSwitch(): UseOnboardingDirectionSwitchReturn {
-  const router      = useRouter();
+  const navigate    = useNavigate();
   const queryClient = useQueryClient();
   const { user, refreshUser } = useAppContext();
 
@@ -143,7 +142,7 @@ export function useDirectionSwitch(): UseOnboardingDirectionSwitchReturn {
       // Safe after refreshUser() resolves. The React Query cache patch (Step 3)
       // ensures useUser() consumers see user_type: null synchronously. The
       // guardReady latch in direction/page.tsx handles the AppContext.user commit.
-      router.push('/direction');
+      navigate('/direction');
 
     } catch (err: unknown) {
       // AS-01: Guard catch-branch state writes against unmount.
@@ -159,7 +158,7 @@ export function useDirectionSwitch(): UseOnboardingDirectionSwitchReturn {
     }
   // isSwitching intentionally excluded — guarded via isSwitchingRef to avoid
   // recreating this callback on every loading-state toggle.
-  }, [user, queryClient, refreshUser, router]);
+  }, [user, queryClient, refreshUser, navigate]);
 
   return { switchDirection, isSwitching, switchError };
 }

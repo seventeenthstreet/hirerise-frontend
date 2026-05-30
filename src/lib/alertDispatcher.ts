@@ -147,6 +147,7 @@ const BASE_SAMPLE_RATES: Record<string, number> = {
  * @param meta  - The _meta object from the dispatch context (for future tuning).
  * @returns     Sampling rate in [0.0, 1.0].
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getSuccessSampleRate(alert: Alert, meta: MetricsMeta): number {
   // Critical: always fully sampled — no meta override can reduce this.
   if (alert.severity === 'critical') return 1.0;

@@ -33,7 +33,6 @@ import type {
   DriftHistoryResponse,
   ExplainabilityResponse,
   CoverageLevel,
-  StabilityLevel,
   DriftLevel,
 } from '@/lib/api/endpoints/intelligence-quality';
 
@@ -82,9 +81,9 @@ export function useIntelligenceQualityReport(
     staleTime: QUALITY_STALE_TIME,
     gcTime:    QUALITY_GC_TIME,
     select: (data: QualityReportResponse) => data,
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Don't retry 404 — means no assessment data yet
-      if (error?.status === 404) return false;
+      if ((error as { status?: number })?.status === 404) return false;
       return failureCount < 2;
     },
   });
@@ -134,8 +133,8 @@ export function useSignalCoverage(
     enabled,
     staleTime: QUALITY_STALE_TIME,
     gcTime:    QUALITY_GC_TIME,
-    retry: (failureCount, error: any) => {
-      if (error?.status === 404) return false;
+    retry: (failureCount, error: unknown) => {
+      if ((error as { status?: number })?.status === 404) return false;
       return failureCount < 2;
     },
   });

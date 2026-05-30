@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file ParticipationDepth.tsx
@@ -18,15 +18,12 @@ import { useState, useEffect } from 'react';
 import type {
   StudentActivity,
   ProficiencyLevel,
-  LeadershipLevel,
   UpdateDepthInput,
 } from '../types';
 import {
   PROFICIENCY_LEVELS,
   PROFICIENCY_LABELS,
   PROFICIENCY_DESCRIPTIONS,
-  LEADERSHIP_LEVELS,
-  LEADERSHIP_LABELS,
 } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,6 +60,7 @@ export function ParticipationDepth({
 
   const selectedActivity = activities.find((a) => a.activityKey === selectedActivityKey) ?? null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const allDepthFilled = activities.every((a) => !a.isPartial);
 
   return (

@@ -3,14 +3,14 @@
  * @description Ambient type declarations for non-TypeScript file imports.
  *
  * TypeScript does not natively understand CSS imports used as side-effects
- * (e.g. `import './globals.css'` in layout.tsx). This declaration tells the
- * TypeScript compiler to treat any `.css` import as a valid module with no
+ * (e.g. `import './academics.css'` in component files). This declaration tells
+ * the TypeScript compiler to treat any `.css` import as a valid module with no
  * exported members, which is exactly what a side-effect CSS import is.
  *
  * Without this file, ts(2882) fires:
- *   "Cannot find module or type declarations for side-effect import of './globals.css'"
+ *   "Cannot find module or type declarations for side-effect import of './foo.css'"
  *
- * Next.js handles the actual CSS processing via PostCSS/Tailwind at build time.
+ * Vite handles the actual CSS processing at build time.
  * This file is purely a TypeScript-layer hint — it has no runtime effect.
  */
 

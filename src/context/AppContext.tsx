@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file context/AppContext.tsx
  * @description Global hydration context — single source of truth for user state.
@@ -46,7 +44,6 @@
 
 import {
   createContext,
-  useContext,
   useState,
   useEffect,
   useCallback,
@@ -64,8 +61,6 @@ import {
   setAnalyticsFlow,
   clearAnalyticsFlow,
 } from '@/lib/analytics';
-import { apiClient } from '@/lib/api/client';
-import { isApiClientError } from '@/lib/api/core/api-error';
 import { useAppHydration } from '@/hooks/useAppHydration'; // RISK-02: network primitives extracted
 import { getSupabaseClient } from '@/lib/supabase/client';
 // FIX-2: Merged two separate `@/lib/query` import statements into one.
@@ -172,86 +167,29 @@ setAnalyticsSession(SESSION_ID);
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface AppContextValue {
-  /** Authenticated user — null until hydration completes or if unauthenticated. */
-  user:           User | null;
-  /**
-   * True once both /app-entry and /users/me have settled (success or error).
-   * Pages MUST wait for isHydrated before making routing decisions.
-   */
-  isHydrated:     boolean;
-  /** True if the hydration fetch failed (e.g. network error or 401). */
-  isError:        boolean;
-  /**
-   * Re-fetches /users/me and updates the cached user.
-   * Race-safe: concurrent callers all receive the same in-flight Promise.
-   */
-  refreshUser:    () => Promise<User | null>;
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// Defined in AppContext.types.ts; re-exported here for public API compatibility.
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Phase 0: Session + Flow tracking ─────────────────────────────────────
-
-  /**
-   * Stable session identifier — generated once per page load.
-   * Use for journey reconstruction and cross-event correlation.
-   * Never changes within a tab's lifetime.
-   */
-  sessionId:      string;
-
-  /**
-   * Current major flow name, or null if no flow is active.
-   * Automatically synced to the analytics envelope via setAnalyticsFlow.
-   *
-   * Canonical flow names — use FLOW_IDS constants:
-   *   'onboarding_professional' | 'onboarding_student' | 'resume_upload' | etc.
-   */
-  currentFlowId:  string | null;
-
-  /**
-   * Begin a major flow. Syncs to analytics envelope immediately.
-   * Call at flow entry points (first page of a funnel).
-   * Do NOT call from the UI layer — call from page-level effects or hooks.
-   *
-   * @param flowName - Use FLOW_IDS constants for canonical names.
-   * @param options.strict - When true, throws (dev) / warns (prod) if a flow
-   *   is already active instead of silently auto-clearing it. Use at entry
-   *   points where overlapping flows indicate a lifecycle bug.
-   */
-  setFlowId:      (flowName: string, options?: { strict?: boolean }) => void;
-
-  /**
-   * End the current major flow. Clears analytics envelope flow context.
-   * Call when a flow completes, is abandoned, or the user navigates away.
-   */
-  clearFlowId:    () => void;
-}
+export type { AppContextValue } from './AppContext.types';
+import type { AppContextValue } from './AppContext.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FLOW ID CONSTANTS — canonical flow names; never hard-code strings
+// Defined in AppContext.constants.ts; re-exported here for public API compatibility.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Canonical flow identifiers for setFlowId().
- * These map to the funnel names in analytics.ts FUNNELS constants.
- *
- * @example
- * const { setFlowId } = useAppContext();
- * useEffect(() => { setFlowId(FLOW_IDS.ONBOARDING_PROFESSIONAL); }, []);
- */
-export const FLOW_IDS = {
-  ONBOARDING_PROFESSIONAL: 'onboarding_professional',
-  ONBOARDING_STUDENT:      'onboarding_student',
-  RESUME_UPLOAD:           'resume_upload',
-  DIRECTION_SELECTION:     'direction_selection',
-  DASHBOARD:               'dashboard',
-} as const;
-
-export type FlowId = typeof FLOW_IDS[keyof typeof FLOW_IDS];
+export { FLOW_IDS, type FlowId } from './AppContext.constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AppContext = createContext<AppContextValue | null>(null);
+// Exported for useAppContext hook in AppContext.hooks.ts only.
+// Do NOT import this context directly in components — use useAppContext().
+// eslint-disable-next-line react-refresh/only-export-components
+export const AppContext = createContext<AppContextValue | null>(null);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STRICTMODE BOOT LATCH
@@ -930,14 +868,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 // HOOK
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Access the global app hydration state.
- * Must be used inside <AppProvider>.
- */
-export function useAppContext(): AppContextValue {
-  const ctx = useContext(AppContext);
-  if (!ctx) {
-    throw new Error('useAppContext must be used within <AppProvider>');
-  }
-  return ctx;
-}
+// useAppContext is defined in AppContext.hooks.ts; re-exported here for
+// public API compatibility — all existing imports continue to work unchanged.
+// eslint-disable-next-line react-refresh/only-export-components
+export { useAppContext } from './AppContext.hooks';

@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file LeadershipReview.tsx
@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import type { StudentActivity, LeadershipLevel, UpdateDepthInput } from '../types';
+import type { StudentActivity, LeadershipLevel } from '../types';
 import { LEADERSHIP_LEVELS, LEADERSHIP_LABELS } from '../types';
 
 interface LeadershipReviewProps {

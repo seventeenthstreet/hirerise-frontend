@@ -6,7 +6,6 @@
  */
 
 import { memo, useState } from 'react';
-import type { ObservabilityEvent } from '@/lib/observability';
 import type { TraceGroup } from './types';
 import { TimelineEventRow } from './TimelineEventRow';
 
@@ -64,7 +63,7 @@ function exportTrace(group: TraceGroup): void {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Must mirror the value in TimelineViewer — used only for display decisions. */
-const SLOW_TRACE_THRESHOLD_MS = 1000;
+const _SLOW_TRACE_THRESHOLD_MS = 1000; // TODO: wire into filter UI
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT

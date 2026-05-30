@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/features/onboarding/orchestration/usePostSubmitNavigation.ts
@@ -59,7 +59,7 @@
  */
 
 import { useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '@/hooks/useUser';
 import {
   resolvePostOnboardingDestination,
@@ -88,7 +88,7 @@ export interface UsePostSubmitNavigationReturn {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function usePostSubmitNavigation(): UsePostSubmitNavigationReturn {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // ── Idempotency guard ─────────────────────────────────────────────────────
   // WHY a ref instead of state: navigation should happen exactly once, and the
@@ -116,9 +116,9 @@ export function usePostSubmitNavigation(): UsePostSubmitNavigationReturn {
 
       // Navigate. router.replace avoids leaving /onboarding in the history
       // stack — matching the existing behavior in the main onboarding page.
-      router.replace(destination);
+      navigate(destination, { replace: true });
     },
-    [router],
+    [navigate],
   );
 
   return { navigateAfterSubmit };

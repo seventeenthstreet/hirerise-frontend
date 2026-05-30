@@ -176,7 +176,6 @@ export interface TelemetrySink {
 const consoleSink: TelemetrySink = {
   capture(event: TelemetryEvent): void {
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.debug('[academic:telemetry]', event.event, event);
     }
   },

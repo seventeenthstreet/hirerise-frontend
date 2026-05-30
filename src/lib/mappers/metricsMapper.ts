@@ -77,7 +77,6 @@ import {
 } from './safeData';
 
 import {
-  DEFAULT_OVERVIEW,
   DEFAULT_RESUME_FUNNEL,
   DEFAULT_ONBOARDING,
   DEFAULT_PERFORMANCE,

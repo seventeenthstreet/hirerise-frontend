@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/student-onboarding/progress/OnboardingProgressBar.tsx

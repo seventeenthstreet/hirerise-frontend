@@ -38,7 +38,6 @@ import {
 } from '@tanstack/react-query';
 
 import * as api from '../api/cognitive.api';
-import { studentOnboardingQueryKeys } from '../../hooks/query-keys';
 
 import type {
   BatchSaveResponsesInput,

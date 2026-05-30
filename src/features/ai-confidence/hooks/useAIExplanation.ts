@@ -30,7 +30,6 @@ import {
   type ConfidenceTier,
   isNarrativeSafeToRender,
   getFallbackCopy,
-  CONFIDENCE_TIERS,
 } from '../../../lib/ai/confidence-language.registry';
 import { evaluateFlag } from '../../../lib/featureFlags';
 
@@ -71,6 +70,7 @@ const AI_FETCH_TIMEOUT_MS = 3000;
 
 export function useAIExplanation({
   assessmentId,
+   
   confidenceTier,
   capability,
 }: UseAIExplanationOptions): AIExplanationResult {
@@ -179,6 +179,7 @@ function _isAugmentationEnabled(): boolean {
  */
 async function _fetchAIExplanation({
   assessmentId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   confidenceTier,
   capability,
   signal,

@@ -39,7 +39,7 @@ import type {
 import { getAccessToken } from '@/lib/supabase/client';
 
 // Phase 3.5 — Observability Layer (additive)
-import { emitApiRequest, emitApiSuccess, emitApiError } from '@/lib/observability/apiInstrumentation';
+import { emitApiSuccess, emitApiError } from '@/lib/observability/apiInstrumentation';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file components/student-onboarding/recovery/OnboardingRecoveryScreen.tsx
  *
@@ -35,9 +33,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import type { RecoveryScenario } from '@/features/student-onboarding/lib/onboarding-hardening.types';
-import type { UseStudentOnboardingFlowReturn } from '@/features/student-onboarding/hooks';
 import {
   captureOnboardingSnapshot,
   buildRecoverySnapshot,
@@ -136,7 +133,7 @@ export function OnboardingRecoveryScreen({
   scenario,
   onRetry,
 }: OnboardingRecoveryScreenProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const copy = SCENARIO_COPY[scenario];
 
   // ── Snapshot on mount ────────────────────────────────────────────────────
@@ -156,7 +153,7 @@ export function OnboardingRecoveryScreen({
 
   function handlePrimary() {
     if (scenario === 'unauthorized') {
-      router.replace('/login');
+      navigate('/login', { replace: true });
     } else {
       onRetry();
     }
@@ -171,11 +168,11 @@ export function OnboardingRecoveryScreen({
       isRecoverable:    false,
       primaryContext:   scenario,
     });
-    router.replace('/education/onboarding');
+    navigate('/education/onboarding', { replace: true });
   }
 
   function handleDashboard() {
-    router.replace('/dashboard');
+    navigate('/dashboard', { replace: true });
   }
 
   return (

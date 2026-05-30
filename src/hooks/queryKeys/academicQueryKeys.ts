@@ -92,7 +92,6 @@ const UUID_PATTERN =
  */
 function assertUuid(value: string, context: string): void {
   if (process.env.NODE_ENV === 'development' && value !== '' && !UUID_PATTERN.test(value)) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[academicQueryKeys] ${context}: expected a UUID but received "${value}". ` +
       'Ensure you are passing stream.id (UUID) not stream.stream_code.',

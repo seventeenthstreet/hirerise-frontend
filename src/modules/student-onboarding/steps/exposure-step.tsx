@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/modules/student-onboarding/steps/exposure-step.tsx

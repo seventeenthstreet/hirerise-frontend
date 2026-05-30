@@ -19,8 +19,7 @@
  */
 
 import type { ThresholdConfig } from '@/lib/config/thresholds';
-import { computeBaseline, computeDelta } from './baselineEngine';
-import { smoothMovingAverage } from './noiseFilter';
+import { computeBaseline } from './baselineEngine';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES

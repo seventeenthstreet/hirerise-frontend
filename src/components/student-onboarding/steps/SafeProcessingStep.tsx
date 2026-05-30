@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/student-onboarding/steps/SafeProcessingStep.tsx
@@ -30,7 +30,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -95,7 +95,7 @@ function RedirectingState() {
  * flipping to true when the AI engine is not yet implemented.
  */
 export function SafeProcessingStep() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [messageIndex, setMessageIndex] = useState(0);
   const [phase, setPhase] = useState<'animating' | 'redirecting'>('animating');
 
@@ -122,10 +122,10 @@ export function SafeProcessingStep() {
   useEffect(() => {
     if (phase !== 'redirecting') return;
     const timer = setTimeout(() => {
-      router.replace('/dashboard');
+      navigate('/dashboard', { replace: true });
     }, REDIRECT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [phase, router]);
+  }, [phase, navigate]);
 
   // ── Redirecting state ────────────────────────────────────────────────────
   if (phase === 'redirecting') {

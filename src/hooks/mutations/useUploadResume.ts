@@ -40,7 +40,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import type { ApiClientError } from '@/lib/api/core';
-import { shouldRetry, retryDelay, queryKeys } from '@/lib/query';
+import { retryDelay, queryKeys } from '@/lib/query';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES

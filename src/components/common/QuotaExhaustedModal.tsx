@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/common/QuotaExhaustedModal.tsx
@@ -220,7 +220,6 @@ export function QuotaExhaustedModal({
           {/* Primary CTA — upgrade */}
           <a
             href={resolvedUpgradeUrl}
-            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             className="inline-flex flex-1 items-center justify-center rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
           >

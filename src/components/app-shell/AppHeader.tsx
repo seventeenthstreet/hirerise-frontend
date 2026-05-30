@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * components/app-shell/AppHeader.tsx

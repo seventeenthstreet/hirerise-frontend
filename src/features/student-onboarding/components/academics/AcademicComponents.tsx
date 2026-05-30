@@ -9,7 +9,7 @@
  * Mobile-first, lightweight, guided — not a table.
  */
 
-'use client';
+
 
 import React, { useState } from 'react';
 

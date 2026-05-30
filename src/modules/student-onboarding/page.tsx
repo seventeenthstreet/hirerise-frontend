@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file src/modules/student-onboarding/page.tsx
  *
@@ -14,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
 import { PageLoading } from '@/components/ui';
 import {
@@ -52,7 +50,7 @@ export default function StudentOnboardingPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function StudentOnboardingContent() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // useStudentOnboardingSession takes NO args — 0-argument contract preserved.
   const {
@@ -131,13 +129,18 @@ function StudentOnboardingContent() {
           });
           break;
         case 'result':
-          router.replace('/education/onboarding');
+          navigate('/education/onboarding', { replace: true });
           break;
         default:
           break;
       }
     },
-    [session?.currentStep, saveEducation, advanceStep, router],
+    // refetchSession is intentionally omitted: it is defined as an inline arrow in
+    // useStudentOnboardingSession's return object, making it a new reference each render.
+    // Adding it would recreate handleStepComplete (and re-render all step children) every
+    // render. Fix in Phase 3C.4: wrap refetch in useCallback inside the session hook.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [session?.currentStep, saveEducation, advanceStep, navigate],
   );
 
   // ── Recovery guard ────────────────────────────────────────────────────────

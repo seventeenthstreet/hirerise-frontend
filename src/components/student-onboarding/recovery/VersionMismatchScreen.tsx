@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/student-onboarding/recovery/VersionMismatchScreen.tsx
@@ -31,7 +31,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import type { VersionMismatchInfo } from '@/features/student-onboarding/lib/onboarding-hardening.types';
 import { logOnboardingEvent } from '@/features/student-onboarding/lib/onboarding-diagnostics';
 import { captureOnboardingSnapshot } from '@/features/student-onboarding/lib/onboarding-snapshot';
@@ -75,7 +75,7 @@ export function VersionMismatchScreen({
   mismatch,
   currentStepId = 'unknown',
 }: VersionMismatchScreenProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // ── Snapshot on mount ─────────────────────────────────────────────────────
   // Critical severity. Captured once when the screen first renders.
@@ -118,7 +118,7 @@ export function VersionMismatchScreen({
         stepAtRestart: currentStepId,
       },
     });
-    router.replace('/education/onboarding');
+    navigate('/education/onboarding', { replace: true });
   }
 
   function handleRefresh() {
@@ -127,7 +127,7 @@ export function VersionMismatchScreen({
   }
 
   function handleDashboard() {
-    router.replace('/dashboard');
+    navigate('/dashboard', { replace: true });
   }
 
   return (

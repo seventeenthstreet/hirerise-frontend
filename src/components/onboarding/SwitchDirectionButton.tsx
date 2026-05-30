@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * components/onboarding/SwitchDirectionButton.tsx

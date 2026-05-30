@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * components/onboarding/shell/OnboardingFooter.tsx

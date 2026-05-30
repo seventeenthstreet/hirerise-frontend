@@ -24,3 +24,159 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/**
+ * src/app/globals.css — HireRise Global Stylesheet + Design Token Foundation
+ *
+ * PURPOSE:
+ *  Establishes semantic CSS custom properties (tokens) consumed by Tailwind's
+ *  semantic color mapping in tailwind.config.js.
+ *
+ *  This is the single source of truth for all semantic colors, spacing,
+ *  and typography foundations across HireRise.
+ *
+ * STRUCTURE:
+ *  1. Tailwind directives
+ *  2. :root — light mode tokens
+ *  3. .dark — dark mode overrides
+ *  4. Base resets
+ *  5. Typography foundations
+ *
+ * IMPORTANT: Do NOT hardcode colors in components. Use semantic tokens only.
+ * All values use HSL channel format (no hsl() wrapper) so Tailwind can
+ * compose opacity modifiers: e.g. bg-primary/10 → hsl(var(--primary) / 0.1)
+ */
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LIGHT MODE TOKENS (default)
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* ── Surface ── */
+  --background:        0 0% 98%;        /* near-white page bg */
+  --foreground:        222 20% 12%;     /* near-black text */
+
+  /* ── Card ── */
+  --card:              0 0% 100%;       /* pure white cards */
+  --card-foreground:   222 20% 12%;
+
+  /* ── Primary brand ── */
+  --primary:           221 83% 53%;     /* blue-600 equivalent */
+  --primary-foreground: 0 0% 100%;      /* white text on primary */
+
+  /* ── Muted / subdued ── */
+  --muted:             220 14% 94%;     /* light grey surfaces */
+  --muted-foreground:  220 9% 46%;      /* subdued text */
+
+  /* ── Border ── */
+  --border:            220 13% 88%;     /* light border */
+
+  /* ── Semantic states ── */
+  --destructive:       0 72% 51%;       /* red-600 */
+  --destructive-foreground: 0 0% 100%;
+
+  --success:           142 71% 45%;     /* green-500 */
+  --success-foreground: 0 0% 100%;
+
+  --warning:           38 92% 50%;      /* amber-500 */
+  --warning-foreground: 0 0% 100%;
+
+  /* ── Input ── */
+  --input:             220 13% 88%;     /* same as border */
+  --ring:              221 83% 53%;     /* focus ring = primary */
+
+  /* ── Radius ── */
+  --radius:            0.5rem;          /* 8px default border radius */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DARK MODE TOKENS
+   Override by applying class="dark" to <html>.
+   ───────────────────────────────────────────────────────────────────────────── */
+.dark {
+  --background:        222 20% 9%;
+  --foreground:        210 17% 93%;
+
+  --card:              222 20% 12%;
+  --card-foreground:   210 17% 93%;
+
+  --primary:           217 91% 60%;
+  --primary-foreground: 222 20% 9%;
+
+  --muted:             217 19% 20%;
+  --muted-foreground:  215 14% 55%;
+
+  --border:            217 19% 22%;
+
+  --destructive:       0 63% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success:           142 63% 45%;
+  --success-foreground: 0 0% 100%;
+
+  --warning:           38 85% 55%;
+  --warning-foreground: 0 0% 9%;
+
+  --input:             217 19% 22%;
+  --ring:              217 91% 60%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE RESETS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus ring using semantic token */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPOGRAPHY FOUNDATIONS
+   ───────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  h1 { @apply text-3xl font-bold tracking-tight; }
+  h2 { @apply text-2xl font-semibold tracking-tight; }
+  h3 { @apply text-xl font-semibold; }
+  h4 { @apply text-lg font-medium; }
+  p  { @apply leading-relaxed; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SPACING FOUNDATIONS
+   These CSS custom properties allow design-system-level spacing overrides
+   without touching component code. Currently maps to Tailwind defaults.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --page-padding-x:    1rem;       /* 16px — mobile */
+  --page-padding-y:    2rem;       /* 32px */
+  --page-max-width:    80rem;      /* 1280px = max-w-7xl */
+  --section-gap:       3rem;       /* 48px between major sections */
+  --card-padding:      1.5rem;     /* 24px inside cards */
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-padding-x:  1.5rem;     /* 24px — sm+ */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-padding-x:  2rem;       /* 32px — lg+ */
+  }
+}

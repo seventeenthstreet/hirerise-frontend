@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * components/app-shell/AppSidebar.tsx
@@ -28,7 +28,6 @@
  *  - User avatar / settings link (sidebar footer)
  */
 
-import type { ReactNode } from 'react';
 import { AppNavigation } from './AppNavigation';
 
 interface AppSidebarProps {

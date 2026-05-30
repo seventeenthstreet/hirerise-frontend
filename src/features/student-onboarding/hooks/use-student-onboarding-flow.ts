@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file features/student-onboarding/hooks/use-student-onboarding-flow.ts
  *
@@ -35,14 +33,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
 
 import {
   useStudentOnboardingSession,
   useSaveEducationProfile,
   useUpdateOnboardingStep,
-  STUDENT_ONBOARDING_STEPS,
   COMPLETABLE_STEP_ENTRIES,
   getProgressPercent,
 } from '@/modules/student-onboarding';
@@ -68,7 +65,6 @@ import type {
 import {
   isSupportedSessionVersion,
   buildVersionMismatchDetail,
-  SUPPORTED_ONBOARDING_VERSIONS,
 } from '../lib/version-guard';
 
 import { logOnboardingEvent } from '../lib/onboarding-diagnostics';
@@ -179,7 +175,7 @@ function resolveRecoveryScenario(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { refreshUser } = useAppContext();
 
   // ── Load timeout guard ────────────────────────────────────────────────────
@@ -293,6 +289,10 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
         primaryContext:    currentStepId,
       });
     }
+  // session, pollingMode, versionCompatibility.isVersionCompatible appear only in
+  // captureOnboardingSnapshot payload — snapshot-at-fire-time values, not trigger
+  // conditions. Adding them would re-fire this diagnostic on every session poll.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepId, isCurrentStepValid]);
 
   // ── Polling guard ─────────────────────────────────────────────────────────
@@ -422,6 +422,10 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
         loadTimeoutRef.current = null;
       }
     };
+  // currentStepId, session, pollingMode, versionCompatibility.isVersionCompatible
+  // appear only in captureOnboardingSnapshot inside the setTimeout callback.
+  // Adding them would restart the timeout on every session poll, preventing it from firing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSessionLoading, isLoadTimeout]);
 
   // ── Session fetch error diagnostic ───────────────────────────────────────
@@ -451,6 +455,10 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
         isRecoverable:     true,
       });
     }
+  // currentStepId, pollingMode, session, versionCompatibility.isVersionCompatible
+  // appear only in captureOnboardingSnapshot payload — snapshot-at-fire-time values.
+  // Adding session would re-trigger on every successful poll (healthy data).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSessionError, sessionError]);
 
   // ── Recovery state ────────────────────────────────────────────────────────
@@ -487,6 +495,10 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
       });
     }
     return { shouldShowRecovery, scenario: recoveryScenario, isLoadTimeout };
+  // pollingMode, session, versionCompatibility.isVersionCompatible appear only in
+  // captureOnboardingSnapshot — a side effect inside useMemo (Phase 3C.4 concern).
+  // Adding them would recompute recovery state on every background session poll.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recoveryScenario, isLoadTimeout, currentStepId]);
 
   // ── Mutation hooks ────────────────────────────────────────────────────────
@@ -543,14 +555,14 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
           break;
         case 'result':
           await refreshUser();
-          router.replace('/dashboard');
+          navigate('/dashboard', { replace: true });
           break;
         case 'processing':
         default:
           break;
       }
     },
-    [session?.currentStep, saveEducation, advanceStep, router, refreshUser],
+    [session?.currentStep, saveEducation, advanceStep, navigate, refreshUser],
   );
 
   return {

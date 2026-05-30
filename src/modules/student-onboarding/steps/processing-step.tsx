@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file src/modules/student-onboarding/steps/processing-step.tsx
  *
@@ -35,7 +33,6 @@ const PROCESSING_MESSAGES = [
   'Finalising your personalised recommendations…',
 ] as const;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ProcessingStep({ onComplete: _onComplete, isBusy: _isBusy }: OnboardingStepProps) {
   const [messageIndex, setMessageIndex] = useState(0);
 

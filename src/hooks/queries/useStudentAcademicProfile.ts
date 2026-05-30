@@ -23,7 +23,7 @@
  *   API layer → [THIS FILE] → onboarding UI components
  */
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { getStudentFullProfile }          from '../../api/academicOnboardingApi';
 import { academicQueryKeys }              from '../queryKeys/academicQueryKeys';
 import { unwrapOrThrow, academicRpcRetryPredicate } from '../utils/rpcExecutor';
@@ -68,7 +68,7 @@ export function useStudentAcademicProfile(
 
   const result = useQuery<StudentFullProfile, Error>({
     queryKey:  academicQueryKeys.studentProfile(userId ?? ''),
-    queryFn:   async ({ signal: _signal }) => {
+    queryFn:   async () => {
       // signal is available if React Query adds cancellation; pass through when
       // the API is upgraded to support AbortSignal
       const res = await getStudentFullProfile();

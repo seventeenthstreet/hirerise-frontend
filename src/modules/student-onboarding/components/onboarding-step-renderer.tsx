@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/modules/student-onboarding/components/onboarding-step-renderer.tsx

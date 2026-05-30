@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file ReflectionSignals.tsx

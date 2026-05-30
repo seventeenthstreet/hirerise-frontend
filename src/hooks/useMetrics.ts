@@ -486,6 +486,10 @@ export function useMetrics(): UseMetricsReturn {
   // ── Whole-response cache ref — kept alive for external consumers ──────────
   // Populated whenever all six queries have settled (at least one data or error).
   // Uses the same AllMetricsCacheEntry shape as before — consumer API unchanged.
+  // The six query objects are intentionally omitted from deps: useQuery returns a
+  // new object reference every render. The dep array lists every accessed *property*
+  // (.data, .isLoading) — the actual values that should trigger cache writes.
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     // Only write a snapshot once all six have exited their initial loading state.
     const allSettled = [
@@ -517,6 +521,7 @@ export function useMetrics(): UseMetricsReturn {
     reliabilityQuery.data,  reliabilityQuery.isLoading,
     experimentsQuery.data,  experimentsQuery.isLoading,
   ]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // ── Product Intelligence — Comparison fetch  (Part 1, UNCHANGED logic) ───
   // This path was already a manual parallel fetch — it remains so because it
@@ -580,7 +585,6 @@ export function useMetrics(): UseMetricsReturn {
     });
 
     return () => { comparisonAbortRef.current?.abort(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comparisonFilters, filters]);
 
   // ── Filter actions ────────────────────────────────────────────────────────

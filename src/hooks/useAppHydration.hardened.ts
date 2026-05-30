@@ -216,7 +216,6 @@ export function useAppHydration({
 
       return null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setUser, setIsError]);
 
 

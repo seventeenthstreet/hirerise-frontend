@@ -43,7 +43,7 @@ let _initialized = false;
  *
  * @example
  *   // In your root layout or client-side provider:
- *   'use client';
+ *   
  *   import { initSilentErrorCapture } from '@/lib/observability/silentErrors';
  *   initSilentErrorCapture();
  */

@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/components/system/ObservabilityProvider.tsx
@@ -33,7 +33,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { initSilentErrorCapture } from '@/lib/observability/silentErrors';
-import { createEvent, pushEvent } from '@/lib/observability/observability';
+import { createEvent } from '@/lib/observability/observability';
 import { logEvent } from '@/lib/observability/logger';
 
 interface ObservabilityProviderProps {

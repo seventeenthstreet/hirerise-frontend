@@ -51,7 +51,6 @@ export type {
   ExperimentMetrics,
   MetricFilters,
   StepCompletionBreakdown,
-  VariantConversionRow,
 } from '@/lib/api/metrics-types';
 
 import type {
@@ -62,7 +61,6 @@ import type {
   ReliabilityMetrics,
   ExperimentMetrics,
   MetricFilters,
-  VariantConversionRow,
 } from '@/lib/api/metrics-types';
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,40 +1,15 @@
-'use client';
-
 /**
  * components/app-shell/AppNavigation.tsx
  *
  * Role-aware navigation composition layer.
- *
- * RESPONSIBILITIES:
- *  - Defines which nav sections/items are shown per user_type
- *  - Composes AppNavSection + AppNavItem
- *  - Exposes the nav items list (used by AppSidebar)
- *
- * DOES NOT OWN:
- *  - Sidebar layout/positioning (AppSidebar owns that)
- *  - Auth logic
- *  - Any state other than active-route detection (delegated to AppNavItem)
- *
- * DESIGN:
- *  Explicit, readable arrays — NOT a config engine or permission framework.
- *  Adding a new nav item = adding one object to the relevant array.
- *
- * ROLE AWARENESS:
- *  - null / undefined user_type → minimal nav (direction not chosen yet)
- *  - 'student'      → student-oriented links
- *  - 'professional' → career/resume links
- *  - 'market'       → market insights links
- *
- * FUTURE INSERTION POINTS (marked with comments):
- *  - AI Copilot panel link
- *  - Notifications badge
- *  - Workspace switcher
- *  - Admin section
+ * Icons and nav-item arrays are defined here (JSX); role-resolution
+ * logic is in useNavItems.ts (pure .ts, no JSX).
  */
 
-import type { ReactNode } from 'react';
 import { AppNavSection } from './AppNavSection';
 import { AppNavItem }    from './AppNavItem';
+import { useNavItems }   from './useNavItems';
+import type { UserType } from './useNavItems';
 import type { NavItemDef } from './AppNavItem';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +30,7 @@ function IconResume() {
     </svg>
   );
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function IconInsights() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
@@ -80,23 +56,18 @@ function IconAnalytics() {
 // FUTURE INSERTION POINT: add IconAICopilot, IconNotifications, IconSettings here
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NAV DEFINITIONS — role-scoped item arrays
+// NAV DEFINITIONS — role-scoped item arrays (defined once at module level)
 // ─────────────────────────────────────────────────────────────────────────────
 
-type UserType = 'student' | 'professional' | 'market' | null | undefined;
-
-/** Core items shown to all authenticated users */
 const CORE_ITEMS: NavItemDef[] = [
   { label: 'Dashboard', href: '/dashboard', icon: <IconDashboard />, exact: true },
 ];
 
-/** Items only for professional users */
 const PROFESSIONAL_ITEMS: NavItemDef[] = [
   { label: 'Resume',    href: '/resume',    icon: <IconResume /> },
   { label: 'Insights',  href: '/dashboard/analytics', icon: <IconAnalytics /> },
 ];
 
-/** Items only for student users */
 const STUDENT_ITEMS: NavItemDef[] = [
   { label: 'Education Onboarding', href: '/education/onboarding', icon: <IconOnboarding /> },
   { label: 'Insights',             href: '/dashboard/analytics',  icon: <IconAnalytics /> },
@@ -104,22 +75,6 @@ const STUDENT_ITEMS: NavItemDef[] = [
 
 // MVP SCOPE: MARKET_ITEMS removed. Re-add post-MVP when Market Insights launches.
 // FUTURE INSERTION POINT: ADMIN_ITEMS, ENTERPRISE_ITEMS
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HOOK — resolves nav items from user_type
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function useNavItems(userType: UserType): {
-  coreItems: NavItemDef[];
-  roleItems: NavItemDef[];
-} {
-  const roleItems: NavItemDef[] =
-    userType === 'professional' ? PROFESSIONAL_ITEMS
-    : userType === 'student'    ? STUDENT_ITEMS
-    : /* 'market' and unknown fall through to core-only nav in MVP */  [];
-
-  return { coreItems: CORE_ITEMS, roleItems };
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -132,7 +87,12 @@ interface AppNavigationProps {
 }
 
 export function AppNavigation({ userType, iconOnly, onNavigate }: AppNavigationProps) {
-  const { coreItems, roleItems } = useNavItems(userType);
+  const { coreItems, roleItems } = useNavItems(
+    userType,
+    CORE_ITEMS,
+    PROFESSIONAL_ITEMS,
+    STUDENT_ITEMS,
+  );
 
   return (
     <nav aria-label="Application navigation" className="flex flex-col gap-4">

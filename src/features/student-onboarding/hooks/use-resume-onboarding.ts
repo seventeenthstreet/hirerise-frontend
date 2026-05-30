@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file features/student-onboarding/hooks/use-resume-onboarding.ts
  *
@@ -35,7 +33,7 @@
  *   Deletion requires an explicit backend operation (future Phase 4).
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { OnboardingSession } from '@/modules/student-onboarding';
 import { STUDENT_ONBOARDING_STEPS } from '@/modules/student-onboarding';
 
@@ -115,6 +113,10 @@ export interface UseResumeOnboardingReturn {
 export function useResumeOnboarding(
   session: OnboardingSession | null,
 ): UseResumeOnboardingReturn {
+  // Capture the current timestamp once at mount — used for staleness comparison.
+  // useState lazy initialiser runs exactly once and is recognised as init-only
+  // by the React Compiler, satisfying the purity constraint.
+  const [now] = useState<number>(() => Date.now());
 
   return useMemo(() => {
     // No session — first-time user
@@ -144,8 +146,8 @@ export function useResumeOnboarding(
     if (session.updatedAt) {
       try {
         const lastUpdate = new Date(session.updatedAt).getTime();
-        const now = Date.now();
-        isStaleSession = now - lastUpdate > STALE_SESSION_THRESHOLD_MS;
+        const nowTs = now;
+        isStaleSession = nowTs - lastUpdate > STALE_SESSION_THRESHOLD_MS;
       } catch {
         // Malformed updatedAt — don't flag as stale
         isStaleSession = false;
@@ -164,5 +166,5 @@ export function useResumeOnboarding(
       resumeStepLabel,
       lastActivityAt: session.updatedAt ?? null,
     };
-  }, [session]);
+  }, [session, now]);
 }

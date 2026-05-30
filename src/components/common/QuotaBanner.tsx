@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/common/QuotaBanner.tsx

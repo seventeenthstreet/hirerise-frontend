@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/student-onboarding/steps/UnknownStepFallback.tsx
@@ -28,7 +28,7 @@
  *   3. Return to dashboard — exit onboarding entirely
  */
 
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROPS
@@ -58,16 +58,16 @@ interface UnknownStepFallbackProps {
  * }
  */
 export function UnknownStepFallback({ stepId, onRetry }: UnknownStepFallbackProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   function handleRestart() {
     // Navigate to the education step entry point (first step).
     // This forces the backend to re-evaluate the session state.
-    router.replace('/education/onboarding');
+    navigate('/education/onboarding', { replace: true });
   }
 
   function handleDashboard() {
-    router.replace('/dashboard');
+    navigate('/dashboard', { replace: true });
   }
 
   return (

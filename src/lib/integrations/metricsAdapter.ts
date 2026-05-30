@@ -1,5 +1,5 @@
 /**
- * @file lib/analytics.ts
+ * @file src/lib/integrations/metricsAdapter.ts
  * @description Centralized analytics primitives for the HireRise SaaS platform.
  *
  * PHASE 0 HARDENING — SaaS Maturity Layer (Pre-Implementation)

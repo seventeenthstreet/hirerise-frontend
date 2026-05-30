@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file front/src/features/student-onboarding/components/academics/AcademicsStepAdapter.tsx
  *
@@ -25,7 +23,6 @@ import type { OnboardingStepProps } from '@/modules/student-onboarding/constants
 import { AcademicsStep }            from './AcademicsStep';
 
 // Props accepted to satisfy registry type contract — not forwarded to AcademicsStep.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function AcademicsStepAdapter(_props: OnboardingStepProps) {
   return <AcademicsStep />;
 }

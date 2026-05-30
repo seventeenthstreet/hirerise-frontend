@@ -27,7 +27,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { requireDirection } from '@/lib/guards';
 import type { User } from '@/hooks/useUser';
 
@@ -63,7 +63,7 @@ export function useOnboardingNavigation({
   isHydrated,
   additionalRedirect,
 }: UseOnboardingNavigationOptions): UseOnboardingNavigationReturn {
-  const router = useRouter();
+  const navigate = useNavigate();
   const redirectingRef = useRef(false);
 
   // Memoize guard — only re-runs when user changes.
@@ -71,7 +71,7 @@ export function useOnboardingNavigation({
   // CRITICAL FIX: Gate on user.user_type being non-null, not just user being non-null.
   //
   // WHY THIS WAS BROKEN:
-  //   After direction selection, setDirection() fires router.push('/onboarding')
+  //   After direction selection, setDirection() fires navigate('/onboarding')
   //   immediately after the API call, before React Query's invalidateQueries()
   //   refetch has delivered the updated user (with user_type set).
   //   The onboarding page mounts with isHydrated=true and user non-null,
@@ -103,15 +103,15 @@ export function useOnboardingNavigation({
 
     if (guardResult && !guardResult.allowed) {
       redirectingRef.current = true;
-      router.replace(guardResult.redirectTo);
+      navigate(guardResult.redirectTo, { replace: true });
       return;
     }
 
     if (additionalRedirectTo) {
       redirectingRef.current = true;
-      router.replace(additionalRedirectTo);
+      navigate(additionalRedirectTo, { replace: true });
     }
-  }, [guardResult, additionalRedirectTo, router]);
+  }, [guardResult, additionalRedirectTo, navigate]);
 
   const isRedirecting =
     (guardResult !== null && !guardResult.allowed) ||

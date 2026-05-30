@@ -41,7 +41,7 @@
  *   to call multiple times (e.g. the user goes back and edits Step 1).
  */
 
-'use client';
+
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import {

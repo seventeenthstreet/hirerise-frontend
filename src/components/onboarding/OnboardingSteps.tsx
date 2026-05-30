@@ -1,4 +1,4 @@
-'use client';
+
 
 import type { OnboardingStep } from '@/lib/api/onboarding';
 

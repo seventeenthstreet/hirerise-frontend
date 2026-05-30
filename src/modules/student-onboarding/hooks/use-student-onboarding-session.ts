@@ -84,7 +84,7 @@
  *   are designed to support this flow without any refactor.
  */
 
-'use client';
+
 
 import { useQuery } from '@tanstack/react-query';
 import { useAppContext } from '@/context/AppContext';
@@ -92,7 +92,6 @@ import { studentOnboardingApi } from '../api';
 import {
   StudentOnboardingError,
   isStudentOnboardingError,
-  StudentOnboardingErrorCode,
   type OnboardingSession,
 } from '../api';
 import { studentOnboardingQueryKeys } from './query-keys';

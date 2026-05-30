@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @file components/analytics/index.tsx
  * @description Pure UI components for the Analytics Dashboard.
@@ -26,7 +24,6 @@
  *   API → Hooks → UI → Pages → Guards → Context
  */
 
-import { useState } from 'react';
 import type { MetricFilters } from '@/lib/api/metrics';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,50 +66,16 @@ const T = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS  (pure functions — no state, no side effects)
+// Defined in ./formatters.ts; imported here for use in component render logic.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function fmtRate(value: number | null | undefined): string {
-  if (value == null) return '—';
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-export function fmtMs(ms: number | null | undefined): string {
-  if (ms == null) return '—';
-  if (ms >= 60_000) return `${(ms / 60_000).toFixed(1)}m`;
-  if (ms >= 1_000)  return `${(ms / 1_000).toFixed(1)}s`;
-  return `${Math.round(ms)}ms`;
-}
-
-export function fmtCount(n: number | null | undefined): string {
-  if (n == null) return '—';
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
-  return n.toLocaleString();
-}
-
-export function fmtDecimal(n: number | null | undefined, decimals = 2): string {
-  if (n == null) return '—';
-  return n.toFixed(decimals);
-}
-
-/**
- * Format a Unix timestamp (ms) as a human-readable relative time string.
- * Pure function — no side effects. Returns '' when ts is 0/null/undefined
- * so callers can use it directly in a conditional render.
- *
- * Examples: "just now", "2 min ago", "1 hr ago"
- *
- * Intentionally limited resolution (minutes / hours) — analytics sections
- * refresh on a 2-minute TTL so sub-minute precision adds no value.
- */
-export function fmtRelativeTime(ts: number | undefined): string {
-  if (!ts) return '';
-  const diffMs = Date.now() - ts;
-  if (diffMs < 10_000)          return 'just now';
-  if (diffMs < 60_000)          return `${Math.floor(diffMs / 1_000)}s ago`;
-  if (diffMs < 3_600_000)       return `${Math.floor(diffMs / 60_000)} min ago`;
-  return `${Math.floor(diffMs / 3_600_000)} hr ago`;
-}
+import {
+  fmtRate,
+  fmtMs,
+  fmtCount,
+  fmtDecimal,
+  fmtRelativeTime,
+} from './formatters';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOADING STATE
@@ -271,6 +234,22 @@ const STATUS_COLOR: Record<MetricCardStatus, string> = {
   neutral:  T.textMuted,
 };
 
+function TrendIcon({ trend }: { trend: MetricCardTrend }) {
+  if (trend === 'neutral') return null;
+  const up = trend === 'up';
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden style={{ flexShrink: 0 }}>
+      <path
+        d={up ? 'M2 10 L7 4 L12 10' : 'M2 4 L7 10 L12 4'}
+        stroke={up ? T.accentGreen : T.accentRed}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function MetricCard({
   label,
   value,
@@ -282,22 +261,6 @@ export function MetricCard({
   detail,
 }: MetricCardProps) {
   const statusColor = STATUS_COLOR[status];
-
-  const TrendIcon = () => {
-    if (!trend || trend === 'neutral') return null;
-    const up = trend === 'up';
-    return (
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden style={{ flexShrink: 0 }}>
-        <path
-          d={up ? 'M2 10 L7 4 L12 10' : 'M2 4 L7 10 L12 4'}
-          stroke={up ? T.accentGreen : T.accentRed}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  };
 
   return (
     <div style={{
@@ -350,7 +313,7 @@ export function MetricCard({
             color: trend === 'up' ? T.accentGreen : trend === 'down' ? T.accentRed : T.textMuted,
             fontFamily: 'monospace',
           }}>
-            <TrendIcon />
+            <TrendIcon trend={trend} />
             {trendLabel}
           </span>
         )}

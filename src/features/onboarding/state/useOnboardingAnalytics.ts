@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file features/onboarding/state/useOnboardingAnalytics.ts

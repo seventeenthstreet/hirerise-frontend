@@ -1,4 +1,4 @@
-'use client';
+
 
 import { useState, useRef } from 'react';
 import type { ApiClientError } from '@/lib/api/core';

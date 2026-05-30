@@ -6,25 +6,7 @@
  */
 
 import { memo } from 'react';
-import type { ObservabilityEventType } from '@/lib/observability';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface TimelineFilterState {
-  errorsOnly: boolean;
-  slowOnly:   boolean;   // ← NEW: show only slow traces
-  typeFilter: ObservabilityEventType | 'all';
-  nameSearch: string;
-}
-
-export const DEFAULT_FILTERS: TimelineFilterState = {
-  errorsOnly: false,
-  slowOnly:   false,   // ← NEW
-  typeFilter: 'all',
-  nameSearch: '',
-};
+import type { TimelineFilterState } from './TimelineFilters.types';
 
 interface TimelineFiltersProps {
   filters: TimelineFilterState;
@@ -54,7 +36,7 @@ export const TimelineFilters = memo(function TimelineFilters({
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-800/60 border-b border-slate-700/60">
 
       {/* ── Search ── */}
-      <div className="relative flex-1 min-w-[140px] max-w-[260px]">
+      <div className="relative flex-1 min-w-35 max-w-65">
         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-[11px] pointer-events-none select-none">
           ⌕
         </span>

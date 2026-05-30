@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * src/lib/supabase/client.ts

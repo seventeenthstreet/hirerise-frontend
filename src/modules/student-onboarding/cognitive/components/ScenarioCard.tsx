@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file front/src/modules/student-onboarding/cognitive/components/ScenarioCard.tsx

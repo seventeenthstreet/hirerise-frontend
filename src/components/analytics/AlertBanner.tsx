@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file components/analytics/AlertBanner.tsx

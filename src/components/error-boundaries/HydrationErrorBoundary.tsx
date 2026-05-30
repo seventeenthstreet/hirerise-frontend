@@ -1,4 +1,3 @@
-'use client';
 /**
  * @file src/components/error-boundaries/HydrationErrorBoundary.tsx
  *
@@ -326,49 +325,6 @@ export class HydrationErrorBoundary extends Component<
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE 7 — BOOTSTRAP RETRY HOOK
+// Defined in HydrationErrorBoundary.helpers.ts.
+// Import directly from that file when needed outside this module.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * UI timeout threshold — after this many ms with isHydrated=false, the
- * HydrationTimeoutScreen is rendered.
- *
- * USAGE in root layout:
- *
- *   useHydrationTimeoutGuard({ isHydrated, onTimeout: () => setShowTimeout(true) });
- *
- * Keep this threshold generous: 15 s covers slow cold starts.
- * warmAppEntry (3 s) + fetchUser (10 s max) = 13 s worst case.
- */
-export const HYDRATION_UI_TIMEOUT_MS = 15_000;
-
-/**
- * React hook that fires onTimeout if isHydrated stays false for longer
- * than HYDRATION_UI_TIMEOUT_MS. Clears on hydration success.
- *
- * Place in root layout or any component that wraps the loading spinner.
- */
-export function useHydrationTimeoutGuard({
-  isHydrated,
-  onTimeout,
-}: {
-  isHydrated: boolean;
-  onTimeout:  () => void;
-}): void {
-  React.useEffect(() => {
-    if (isHydrated) return;
-
-    const id = setTimeout(() => {
-      onTimeout();
-      try {
-        logEvent(createEvent({
-          type:    'system',
-          name:    'HYDRATION_UI_TIMEOUT',
-          level:   'warn',
-          context: { thresholdMs: HYDRATION_UI_TIMEOUT_MS },
-        }));
-      } catch { /* never surface */ }
-    }, HYDRATION_UI_TIMEOUT_MS);
-
-    return () => clearTimeout(id);
-  }, [isHydrated, onTimeout]);
-}

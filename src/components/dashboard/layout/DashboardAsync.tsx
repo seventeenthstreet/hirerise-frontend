@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * components/dashboard/layout/DashboardAsync.tsx

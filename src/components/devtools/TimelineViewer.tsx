@@ -14,7 +14,7 @@
  *   <TimelineViewer autoRefreshMs={2000} defaultOpen={false} />
  */
 
-'use client';
+
 
 import {
   useState,
@@ -26,11 +26,9 @@ import {
 } from 'react';
 import { getEventBuffer } from '@/lib/observability';
 import type { ObservabilityEvent } from '@/lib/observability';
-import {
-  TimelineFilters,
-  DEFAULT_FILTERS,
-} from './TimelineFilters';
-import type { TimelineFilterState } from './TimelineFilters';
+import { TimelineFilters } from './TimelineFilters';
+import { DEFAULT_FILTERS } from './TimelineFilters.types';
+import type { TimelineFilterState } from './TimelineFilters.types';
 import { TimelinePanel } from './TimelinePanel';
 import type { TraceGroup } from './TimelinePanel';
 
@@ -101,7 +99,7 @@ function buildTraceGroups(events: ReadonlyArray<ObservabilityEvent>): TraceGroup
     }
 
     // Strip internal _ts field — it must not leak into the stored group
-    const sorted = parsedEvents.map(({ _ts: _ignored, ...e }) => e as ObservabilityEvent);
+    const sorted = parsedEvents.map(({ _ts, ...e }) => e as ObservabilityEvent);
 
     groups.push({
       traceId,
@@ -314,7 +312,7 @@ const TimelineViewerInner = memo(function TimelineViewerInner({
     }
 
     hasMounted.current = true;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // Auto-refresh + user-scroll tracking
@@ -381,7 +379,7 @@ const TimelineViewerInner = memo(function TimelineViewerInner({
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-[9999] w-[560px] max-h-[80vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-tl-xl shadow-2xl font-mono text-sm"
+      className="fixed bottom-0 right-0 z-9999 w-140 max-h-[80vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-tl-xl shadow-2xl font-mono text-sm"
       role="region"
       aria-label="Observability Timeline (dev)"
     >

@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file front/src/modules/student-onboarding/steps/cognitive-step.tsx
@@ -104,6 +104,7 @@ export default function CognitiveStep({ onComplete, isBusy }: OnboardingStepProp
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const result = await commitCognitive.mutateAsync();
       // Pass next_step hint to page.tsx for session advancement dispatch.
       // page.tsx switch(case 'cognitive') will call advanceStep().

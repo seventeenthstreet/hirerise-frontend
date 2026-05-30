@@ -1,4 +1,4 @@
-'use client';
+
 
 export { OnboardingShell } from './OnboardingShell';
 export { OnboardingHeader } from './OnboardingHeader';

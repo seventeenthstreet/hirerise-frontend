@@ -10,7 +10,7 @@
  * App.tsx → AppProviders → Router → Layouts → Pages → Modules → Components
  */
 
-import { AppProviders } from './app/AppProviders';
+import { AppProviders } from './providers/AppProviders';
 
 export default function App() {
   return <AppProviders />;

@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/components/system/fallbacks/WidgetErrorFallback.tsx
@@ -69,7 +69,7 @@ export function WidgetErrorFallback({
   // Micro-tweak 5: track cumulative retry attempts for future use —
   // retry throttling, flaky-endpoint analytics, or debug tooling.
   // Does NOT affect any UI rendering today.
-  const [retryCount, setRetryCount] = useState(0);
+  const [, setRetryCount] = useState(0);
 
   // Final polish 1: track mount status so the async isFetching effect never
   // calls setState on an already-unmounted instance. Avoids the React warning
@@ -97,7 +97,7 @@ export function WidgetErrorFallback({
   // retry. Fires at most once per retry cycle — isRetrying gates it.
   // Stripped by minifiers in production builds; zero runtime cost in prod.
   if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+
     // (safe: this is a module-level constant branch, never conditional at runtime)
     if (isRetrying && isFetching === undefined) {
       console.warn(

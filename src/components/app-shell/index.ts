@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * components/app-shell/index.ts
  *
@@ -11,7 +9,8 @@ export { AppShell }       from './AppShell';
 export { AppSidebar }     from './AppSidebar';
 export { AppHeader }      from './AppHeader';
 export { AppContent }     from './AppContent';
-export { AppNavigation, useNavItems } from './AppNavigation';
+export { AppNavigation }  from './AppNavigation';
+export { useNavItems }    from './useNavItems';
 export { AppNavSection }  from './AppNavSection';
 export { AppNavItem }     from './AppNavItem';
 export type { NavItemDef } from './AppNavItem';

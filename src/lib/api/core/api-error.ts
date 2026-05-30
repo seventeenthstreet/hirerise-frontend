@@ -202,10 +202,10 @@ function sanitizeForLog(raw: unknown): unknown {
 
   // 2. Redact JWT segments (three base64url segments separated by dots)
   //    Matches any eyJ... token even without "Bearer" prefix
-  s = s.replace(/eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*/g, '[JWT REDACTED]');
+  s = s.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g, '[JWT REDACTED]');
 
   // 3. Redact email addresses (RFC 5322 simplified)
-  s = s.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+  s = s.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
 
   // 4. Redact common secret key patterns in key=value or "key":"value" JSON forms
   //    Covers: apikey, api_key, secret, password, token, access_token, refresh_token
@@ -245,6 +245,7 @@ function sanitizeForLog(raw: unknown): unknown {
  * This prevents JWTs, tokens, emails, and other PII from appearing in logs.
  */
 export function logApiParsingError(context: {
+   
   stage: string;
   raw?: unknown;
   error?: unknown;
@@ -487,6 +488,7 @@ export class ApiClientError extends Error {
  * In development, emits a `console.warn` with the stage name so backend drift
  * is caught early without needing to inspect network panels.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function makeFallbackError(httpStatus = 500, stage?: string): ApiClientError {
   // DO NOT call logApiParsingError here.
   //

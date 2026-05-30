@@ -1,4 +1,4 @@
-'use client';
+
 
 /**
  * @file src/providers/Providers.tsx

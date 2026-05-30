@@ -69,7 +69,7 @@
  *   pattern without any refactoring.
  */
 
-'use client';
+
 
 import { useQuery } from '@tanstack/react-query';
 import { useAppContext } from '@/context/AppContext';

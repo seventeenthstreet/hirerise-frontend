@@ -40,12 +40,11 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/context/AppContext';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from '@/lib/query';
-import type { User } from '@/hooks/useUser';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -68,7 +67,7 @@ export interface UseOnboardingDirectionSwitchReturn {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useOnboardingDirectionSwitch(): UseOnboardingDirectionSwitchReturn {
-  const router       = useRouter();
+  const navigate     = useNavigate();
   const queryClient  = useQueryClient();
   const { user, refreshUser } = useAppContext();
 
@@ -182,7 +181,7 @@ export function useOnboardingDirectionSwitch(): UseOnboardingDirectionSwitchRetu
       //   - The guardReady latch in direction/page.tsx ensures the guard waits
       //     for that commit before evaluating — no bounce loop.
       // router.push preserves the AppShell (no full reload, no remount).
-      router.push('/direction');
+      navigate('/direction');
 
     } catch (err: unknown) {
       // AS-01: Guard catch-branch state writes against unmount.
@@ -199,7 +198,7 @@ export function useOnboardingDirectionSwitch(): UseOnboardingDirectionSwitchRetu
     }
   // isSwitching intentionally excluded — guarded via isSwitchingRef to avoid
   // recreating this callback on every loading-state toggle.
-  }, [user, queryClient, refreshUser, router]);
+  }, [user, queryClient, refreshUser, navigate]);
 
   return { switchDirection, isSwitching, switchError };
 }

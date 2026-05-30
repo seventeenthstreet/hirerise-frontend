@@ -1,10 +1,8 @@
-'use client';
-
 /**
  * components/app-shell/AppNavItem.tsx
  *
  * Single navigation item in the app sidebar.
- * Highlights the active route via usePathname().
+ * Highlights the active route via useLocation().
  *
  * Does NOT own:
  *  - sidebar open/close state
@@ -12,8 +10,8 @@
  *  - auth logic
  */
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { NavLink } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 export interface NavItemDef {
@@ -44,14 +42,15 @@ export function AppNavItem({
   iconOnly = false,
   onClick,
 }: AppNavItemProps) {
-  const pathname = usePathname();
+  const location = useLocation();
+  const pathname = location.pathname;
   const isActive = exact
     ? pathname === href
     : pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <Link
-      href={href}
+    <NavLink
+      to={href}
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
       className={[
@@ -83,6 +82,6 @@ export function AppNavItem({
           {badge > 99 ? '99+' : badge}
         </span>
       )}
-    </Link>
+    </NavLink>
   );
 }

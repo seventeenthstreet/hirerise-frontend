@@ -47,7 +47,7 @@
  *   API layer → [THIS FILE] → onboarding step components
  */
 
-'use client';
+
 
 import {
   useMutation,

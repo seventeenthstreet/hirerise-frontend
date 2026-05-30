@@ -26,12 +26,11 @@
  *   This component NEVER calculates advancement locally.
  */
 
-'use client';
+
 
 import './academics.css';
 
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 import {
   AcademicProgressIndicator,
@@ -45,6 +44,8 @@ import {
   useAcademicProgress,
 } from '@/modules/student-onboarding/hooks/use-academics';
 
+import { useStudentOnboardingSession } from '@/modules/student-onboarding';
+
 import {
   logOnboardingEvent,
 } from '@/features/student-onboarding/lib/onboarding-diagnostics';
@@ -55,6 +56,9 @@ import type {
   AcademicsDraftState,
   SubjectMarksInput,
   AcademicBoardType,
+  AcademicSubject,
+  AcademicGrade,
+  AcademicSourceType,
 } from '@/features/student-onboarding/lib/academic.types';
 
 import { ACADEMIC_YEARS_LIST } from '@/features/student-onboarding/lib/academic.types';
@@ -65,7 +69,7 @@ import { ACADEMIC_YEARS_LIST } from '@/features/student-onboarding/lib/academic.
 // ─────────────────────────────────────────────────────────────────────────────
 
 type DraftAction =
-  | { type: 'INIT_FROM_SERVER';  years: Record<string, any> }
+  | { type: 'INIT_FROM_SERVER';  years: Record<string, RawServerYear> }
   | { type: 'SET_BOARD';         year: AcademicYear; board: AcademicBoardType }
   | { type: 'SET_PREDICTED';     year: AcademicYear; value: boolean }
   | { type: 'UPSERT_SUBJECT';    year: AcademicYear; subject: SubjectMarksInput }
@@ -88,8 +92,25 @@ function buildEmptyYearDraft(year: AcademicYear): AcademicYearDraft {
   };
 }
 
+
+/** Raw server-side academic year shape before mapping to AcademicYearDraft. */
+interface RawServerSubject {
+  subject:        AcademicSubject;
+  marks_obtained: number | null;
+  max_marks:      number | null;
+  grade?:         AcademicGrade | null;
+  source_type?:   AcademicSourceType;
+  is_predicted?:  boolean;
+}
+
+interface RawServerYear {
+  board_type?:   AcademicBoardType;
+  is_predicted?: boolean;
+  subjects?:     RawServerSubject[];
+}
+
 function initDraftFromServer(
-  serverYears: Record<string, any>,
+  serverYears: Record<string, RawServerYear>,
 ): AcademicsDraftState['years'] {
   const draft = {} as Record<AcademicYear, AcademicYearDraft>;
   for (const year of ACADEMIC_YEARS_LIST) {
@@ -99,11 +120,11 @@ function initDraftFromServer(
           academic_year: year,
           board_type:    saved.board_type    ?? 'cbse',
           is_predicted:  saved.is_predicted  ?? false,
-          subjects:      (saved.subjects ?? []).map((s: any): SubjectMarksInput => ({
+          subjects:      (saved.subjects ?? []).map((s: RawServerSubject): SubjectMarksInput => ({
             subject:        s.subject,
             marks_obtained: s.marks_obtained,
             max_marks:      s.max_marks,
-            grade:          s.grade,
+            grade:          s.grade ?? null,
             source_type:    s.source_type ?? 'manual',
             is_predicted:   s.is_predicted ?? false,
           })),
@@ -243,7 +264,8 @@ const INITIAL_DRAFT_STATE: AcademicsDraftState = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function AcademicsStep() {
-  const router = useRouter();
+  // Session refetch — used to re-poll after step advancement (replaces router.refresh())
+  const { refetch: refetchSession } = useStudentOnboardingSession();
 
   // Server state
   const { years: serverYears, signalQuality, isLoading, isError, refetch } = useAcademicRecords();
@@ -266,18 +288,6 @@ export function AcademicsStep() {
     dispatch({ type: 'INIT_FROM_SERVER', years: serverYears });
   }, [isLoading, serverYears]);
 
-  // ── Autosave: triggered on year switch if the leaving year is dirty ────────
-  const handleYearSwitch = useCallback(
-    async (newYear: AcademicYear) => {
-      const leavingDraft = draft.years[activeYear];
-      if (leavingDraft?.is_touched && leavingDraft.subjects.length > 0) {
-        await triggerPartialSave(activeYear, leavingDraft);
-      }
-      setActiveYear(newYear);
-    },
-    [activeYear, draft.years],
-  );
-
   // ── Partial save (autosave + manual save) ─────────────────────────────────
   const triggerPartialSave = useCallback(
     async (year: AcademicYear, yearDraft: AcademicYearDraft) => {
@@ -295,11 +305,24 @@ export function AcademicsStep() {
           isPartial: true,
         });
         dispatch({ type: 'MARK_SAVED', year });
-      } catch (err: any) {
-        dispatch({ type: 'SET_SAVE_ERROR', year, error: err.message });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'An error occurred while saving.';
+        dispatch({ type: 'SET_SAVE_ERROR', year, error: message });
       }
     },
     [saveYear],
+  );
+
+  // ── Autosave: triggered on year switch if the leaving year is dirty ────────
+  const handleYearSwitch = useCallback(
+    async (newYear: AcademicYear) => {
+      const leavingDraft = draft.years[activeYear];
+      if (leavingDraft?.is_touched && leavingDraft.subjects.length > 0) {
+        await triggerPartialSave(activeYear, leavingDraft);
+      }
+      setActiveYear(newYear);
+    },
+    [activeYear, draft.years, triggerPartialSave],
   );
 
   // ── Commit save (Continue button) ─────────────────────────────────────────
@@ -336,8 +359,8 @@ export function AcademicsStep() {
       });
 
       if (result.next_step && result.next_step !== 'academics') {
-        // Session advanced — let the onboarding router handle navigation
-        router.refresh();
+        // Session advanced — trigger re-poll so the shell picks up the new step
+        refetchSession();
       } else {
         // Signal insufficient despite commit attempt
         dispatch({
@@ -345,8 +368,9 @@ export function AcademicsStep() {
           error: 'Please add more academic subjects to continue.',
         });
       }
-    } catch (err: any) {
-      dispatch({ type: 'SET_SUBMIT_ERROR', error: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred while saving.';
+      dispatch({ type: 'SET_SUBMIT_ERROR', error: message });
       logOnboardingEvent({
         event:          'session_fetch_failed',
         severity:       'error',
@@ -354,13 +378,13 @@ export function AcademicsStep() {
         onboardingStep: 'academics',
         metadata: {
           errorCategory: 'academic_commit_failed',
-          errorMessage:  err.message,
+          errorMessage:  message,
         },
       });
     } finally {
       dispatch({ type: 'SET_SUBMITTING', value: false });
     }
-  }, [signalQuality, activeYear, draft.years, saveYear, router]);
+  }, [signalQuality, activeYear, draft.years, saveYear, refetchSession]);
 
   // ── Subject handlers (passed down to AcademicYearCard) ────────────────────
   const handleUpsertSubject = useCallback(

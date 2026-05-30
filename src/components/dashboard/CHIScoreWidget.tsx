@@ -55,7 +55,7 @@ export const CHIScoreWidget = React.memo(function CHIScoreWidget({
   error,
   dependenciesMet,
   missingItems,
-  version = 'v1',
+  version: _version = 'v1',
 }: CHIScoreWidgetProps) {
   if (isLoading) {
     return (
