@@ -412,6 +412,15 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
         loadTimeoutRef.current = null;
       }
       if (!isSessionLoading) {
+        // Async orchestration state: clears the timeout flag once the session
+        // loading workflow resolves. This must run in an effect — not at render
+        // time — because it is gated on isSessionLoading transitioning to false,
+        // an async event driven by React Query. Render-time derivation would
+        // not correctly represent this transition and could mask a genuine
+        // timeout that fires while loading is transiently false between retries.
+        // The isLoadTimeout flag is authoritative: the UI and snapshot logic
+        // both depend on it as a stable boolean, not a derived expression.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsLoadTimeout(false);
       }
     }

@@ -211,6 +211,15 @@ export function useResumeManager(
   }, []);
 
   useEffect(() => {
+    // Async orchestration trigger: fires the initial resume list fetch after
+    // mount. refresh() is an async function that sequences setLoading(true),
+    // the listResumes() API call, and post-await state writes — all guarded
+    // by mountedRef to prevent setState on unmounted components (AS-01).
+    // This cannot be invoked at render time: the fetch is async and the
+    // mountedRef guard requires post-commit timing to be valid. The effect
+    // dep on `refresh` (a stable useCallback ref) ensures this fires once
+    // on mount and re-fires only if the callback identity changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
 
