@@ -1,5 +1,3 @@
-
-
 /**
  * @file front/src/modules/student-onboarding/steps/cognitive-step.tsx
  *
@@ -64,7 +62,17 @@ export default function CognitiveStep({ onComplete, isBusy }: OnboardingStepProp
   // Hydrate once from server data — preserves local taps made before data arrives
   useEffect(() => {
     if (!hasHydrated && stepData?.responseMap) {
+      // One-time hydration: seeds localSelections from the server-persisted
+      // responseMap on first data arrival. After seeding, state intentionally
+      // diverges — handleSelect applies optimistic updates to localSelections
+      // before the background save resolves, giving instant visual feedback.
+      // Render-time derivation from stepData.responseMap is incorrect: it
+      // would reset all optimistic taps on every re-render triggered by any
+      // state change in the component, causing visible flicker and data loss.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalSelections(stepData.responseMap);
+      // Idempotency guard: prevents a subsequent React Query re-fetch from
+      // re-hydrating over the user's in-progress optimistic taps.
       setHasHydrated(true);
     }
   }, [hasHydrated, stepData?.responseMap]);

@@ -1,5 +1,3 @@
-
-
 /**
  * @file front/src/modules/student-onboarding/steps/activities-step.tsx
  *
@@ -108,9 +106,21 @@ export default function ActivitiesStep({ onComplete, isBusy }: OnboardingStepPro
     }
 
     if (restoredSubstep !== 'discovery') {
+      // One-time onboarding restoration: advances the user to their furthest
+      // reached substep based on persisted server state (signalQuality,
+      // achievementMap). Render-time derivation is incorrect because
+      // currentSubstep intentionally diverges after restoration — the user
+      // navigates forward and backward locally, and re-deriving from server
+      // state on every render would continuously overwrite that navigation.
+      // The hasRestoredSubstep guard ensures this fires exactly once.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentSubstep(restoredSubstep);
     }
 
+    // Idempotency guard: marks restoration complete so this effect never
+    // re-fires. Without it, any re-render that changes isLoading or data
+    // would re-run the restoration logic and snap currentSubstep back to
+    // the server-computed position, overwriting the user's local navigation.
     setHasRestoredSubstep(true);
   }, [isLoading, data, hasRestoredSubstep]);
 

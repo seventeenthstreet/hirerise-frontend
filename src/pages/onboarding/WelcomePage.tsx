@@ -272,6 +272,16 @@ function OnboardingContent({
       : null;
 
     if (resolvedVariant) {
+      // Effect timing is load-bearing: setVariantState is intentionally placed
+      // after all redirect branches in this effect. If variantState were derived
+      // at render time, an already-complete user would briefly render the full
+      // welcome UI (with the correct variant) before the redirect fires — which
+      // could trigger analytics events or component side effects for a page
+      // they are being navigated away from. The effect ensures variantState is
+      // only set for users who will actually see the page. variantState is
+      // authoritative: it gates the loading spinner (line 398) and controls
+      // which UI copy, form, and analytics variant are rendered.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVariantState(resolvedVariant);
     }
   }, [user, navigate, pendingPostSubmitNav]);
