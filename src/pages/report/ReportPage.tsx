@@ -1,5 +1,3 @@
-
-
 /**
  * app/(auth)/(app)/report/page.tsx — Career Report Page
  *
@@ -14,10 +12,9 @@
  *  5. Render placeholder upgrade CTA at the bottom
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageShell } from '@/components/ui/PageShell';
-import { PageLoading } from '@/components/ui/PageLoading';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { billingApi } from '@/lib/api/endpoints/billing';
@@ -90,29 +87,21 @@ function BorderedList({ items }: { items: string[] }) {
 
 export default function ReportPage() {
   const navigate = useNavigate();
-  const [report, setReport] = useState<CareerReport | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [upgradeError, setUpgradeError] = useState<string | null>(null);
-
-  useEffect(() => {
+  // Lazy initializer: sessionStorage is synchronous — no effect needed.
+  const [report] = useState<CareerReport | null>(() => {
     try {
       const raw = sessionStorage.getItem('careerReport');
       if (raw) {
         const parsed: ReportPayload = JSON.parse(raw);
-        setReport(parsed?.careerReport ?? null);
+        return parsed?.careerReport ?? null;
       }
     } catch {
       // Malformed JSON — treat as missing
-    } finally {
-      setHydrated(true);
     }
-  }, []);
-
-  // ── Loading state ───────────────────────────────────────────────────────────
-  if (!hydrated) {
-    return <PageLoading label="Loading your report…" />;
-  }
+    return null;
+  });
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   // ── Missing report state ────────────────────────────────────────────────────
   if (!report) {

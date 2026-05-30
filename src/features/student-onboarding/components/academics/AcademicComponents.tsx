@@ -310,11 +310,11 @@ interface AcademicProgressIndicatorProps {
 
 export function AcademicProgressIndicator({
   progress,
-  activeYear,
+  activeYear: _activeYear,
 }: AcademicProgressIndicatorProps) {
   if (!progress) return null;
 
-  const { total_years_touched, total_subjects_saved, signal_quality, can_advance } = progress;
+ const { total_years_touched, total_subjects_saved, can_advance } = progress;
 
   return (
     <div className="academic-progress-indicator" aria-label="Academic progress summary">

@@ -532,7 +532,9 @@ export function useMetrics(): UseMetricsReturn {
   useEffect(() => {
     if (!comparisonFilters) {
       comparisonAbortRef.current?.abort();
-      setPreviousData(null);
+      // Safe-fix: move setState into an async callback to avoid synchronous
+      // setState-in-effect, which causes cascading renders (react-hooks/set-state-in-effect).
+      void Promise.resolve().then(() => setPreviousData(null));
       return;
     }
 
