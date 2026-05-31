@@ -1,5 +1,3 @@
-
-
 /**
  * @file src/modules/student-onboarding/steps/education-step.tsx
  *
@@ -18,7 +16,7 @@
  *   - Controlled state (no external form library — not in dependency tree)
  *   - Zod validates the complete payload before submission
  *   - Field-level errors derived from Zod ZodError.issues
- *   - Submission guard (submitting ref) prevents duplicate in-flight calls
+ *   - Submission guard (submitting state) prevents duplicate in-flight calls
  *   - Error states rendered inline, not as modals or toasts
  *   - All mutation state is owned by the parent page → passed as isBusy
  *
@@ -31,8 +29,8 @@
  *   6. OnboardingStepRenderer receives new stepId → renders AcademicsStep
  *
  * DUPLICATE SUBMISSION PROTECTION:
- *   - `submitting` ref (not state) prevents double-fire without extra renders
- *   - Submit button disabled while isBusy || submitting.current || !isValid
+ *   - `submitting` state prevents double-fire and immediately disables the button
+ *   - Submit button disabled while isBusy || submitting || !isValid
  *   - onComplete is async — awaited; submitting released in finally block
  *
  * API ERROR DISPLAY:
@@ -64,7 +62,6 @@
 
 import {
   useState,
-  useRef,
   useId,
   useCallback,
   type FormEvent,
@@ -251,12 +248,14 @@ export default function EducationStep({
   const [isDirty,       setIsDirty]       = useState(false);
 
   // ── Duplicate-submission protection ───────────────────────────────────────
-  // Ref (not state) to avoid an extra render cycle when toggling.
-  // The submit button's disabled prop already reflects isBusy from parent.
-  const submitting = useRef(false);
+  // State (not ref) so the submit button's disabled prop reflects the lock
+  // immediately when submission starts, preventing a brief window where the
+  // button appears enabled while a request is in flight.
+  // isBusy (from parent) remains the authoritative workflow guard.
+  const [submitting, setSubmitting] = useState(false);
 
   // ── Derived: is the form minimally valid for submission ───────────────────
-  const canSubmit = isFormSubmittable(form) && !isBusy && !submitting.current;
+  const canSubmit = isFormSubmittable(form) && !isBusy && !submitting;
 
   // ─────────────────────────────────────────────────────────────────────────
   // FIELD SETTERS
@@ -296,7 +295,7 @@ export default function EducationStep({
     e.preventDefault();
 
     // Gate 1: duplicate submission protection
-    if (submitting.current || isBusy) return;
+    if (submitting || isBusy) return;
 
     // Gate 2: mark dirty to surface any inline errors
     setIsDirty(true);
@@ -316,7 +315,7 @@ export default function EducationStep({
     }
 
     // Gate 4: acquire in-flight lock
-    submitting.current = true;
+    setSubmitting(true);
 
     try {
       // Delegate to parent — no API calls here.
@@ -331,9 +330,9 @@ export default function EducationStep({
           : 'Something went wrong. Please try again.';
       setSubmitError(message);
     } finally {
-      submitting.current = false;
+      setSubmitting(false);
     }
-  }, [form, isBusy, onComplete]);
+  }, [form, isBusy, onComplete, submitting]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -414,7 +413,7 @@ export default function EducationStep({
                   className={[
                     'relative flex flex-col items-center gap-0.5 rounded-lg border px-2 py-3',
                     'text-center text-sm font-medium transition-all duration-150',
-                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     'disabled:cursor-not-allowed disabled:opacity-50',
                     isSelected
                       ? 'border-primary bg-primary/8 text-primary shadow-sm ring-1 ring-primary/30'
@@ -505,7 +504,7 @@ export default function EducationStep({
                   className={[
                     'flex items-center justify-between rounded-lg border px-3 py-2.5',
                     'text-sm font-medium transition-all duration-150',
-                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     'disabled:cursor-not-allowed disabled:opacity-50',
                     isSelected
                       ? 'border-primary bg-primary/8 text-primary ring-1 ring-primary/30'
@@ -567,7 +566,7 @@ export default function EducationStep({
                   className={[
                     'flex items-center gap-2 rounded-lg border px-4 py-2.5',
                     'text-sm font-medium transition-all duration-150',
-                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     'disabled:cursor-not-allowed disabled:opacity-50',
                     isSelected
                       ? 'border-primary bg-primary/8 text-primary ring-1 ring-primary/30'
@@ -642,7 +641,7 @@ export default function EducationStep({
           className={[
             'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3',
             'text-sm font-semibold transition-all duration-150',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
             'disabled:cursor-not-allowed disabled:opacity-50',
             canSubmit
               ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'

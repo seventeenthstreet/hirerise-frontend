@@ -262,13 +262,52 @@ function CareerOnboardingContent({
     setVariant('professional');
 
     if (restoredData?.completedSteps && Array.isArray(restoredData.completedSteps)) {
+      // One-time onboarding progress restoration from React Query data.
+      //
+      // restoredData arrives asynchronously after mount: useOnboarding() fetches
+      // the user's previously saved progress via React Query, which resolves some
+      // time after the component renders. When it resolves, restoredData contains
+      // the steps the user has already completed in a prior session.
+      //
+      // This call seeds completedSteps from that server-side snapshot exactly once
+      // at mount. After restoration, completedSteps becomes the locally authoritative
+      // source of truth and continues to grow as the user advances through the flow
+      // (see handleStepComplete). Re-deriving completedSteps from restoredData on
+      // every render — or including restoredData in this effect's deps — would
+      // overwrite locally accumulated progress whenever React Query re-fetches in
+      // the background, silently resetting the user's position mid-session.
+      // The "cascading renders" concern from react-hooks/set-state-in-effect does
+      // not apply here: React 18 batches both setState calls below into a single
+      // commit, and the effect fires at most once ([] dep array). The alternative —
+      // using useLayoutEffect or deferring via useReducer — would complicate the
+      // restoration logic without improving correctness.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCompletedSteps(new Set(restoredData.completedSteps as StepId[]));
       const lastCompleted = (restoredData.completedSteps as StepId[]).at(-1);
       const currentIdx = CAREER_STEPS.findIndex((s) => s.id === lastCompleted);
       if (currentIdx !== -1 && currentIdx + 1 < CAREER_STEPS.length) {
+        // Resume-position restoration: land the user on the next uncompleted step.
+        //
+        // activeStep must be derived from completedSteps at the moment of
+        // restoration, not on every render. The correct resume position is
+        // CAREER_STEPS[lastCompletedIndex + 1] — the step immediately after
+        // the furthest step the user reached. Deriving this from restoredData
+        // at render time is unsafe for the same reason as completedSteps: a
+        // background React Query refresh would re-run this derivation and jump
+        // the user backward to a step they have already submitted, discarding
+        // any unsaved form state collected since mount.
         setActiveStep(CAREER_STEPS[currentIdx + 1].id);
       }
     }
+  // intentional: restoredData is excluded from deps to make this a one-shot
+  // restoration that fires only on mount.
+  //
+  // Including restoredData would cause the effect to re-run every time React
+  // Query refreshes its cache in the background (stale-while-revalidate polling,
+  // window-focus refetch, or manual invalidation). Each re-run would overwrite
+  // completedSteps and activeStep with the server snapshot, erasing any local
+  // progress the user made since the page loaded. The [] dep array guarantees
+  // restoration happens exactly once, after which local state owns the session.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -740,6 +779,15 @@ function CareerOnboardingContent({
                 <PersonalDetailsStep
                   onComplete={(data) => handleStepComplete('personal-details', data)}
                   isBusy={isBusy}
+                  // Workflow accumulator ref — safe to read during render here.
+                  // formDataRef is mutated by handleStepComplete before activeStep advances,
+                  // so this step mounts only after the ref contains the latest merged data.
+                  // initialData seeds this step's useState fields at mount time only.
+                  // Replacing formDataRef with useState would trigger unnecessary page
+                  // re-renders on every step save without improving correctness.
+                  // React Compiler cannot statically verify the mutation-before-mount
+                  // sequencing, but no stale read is possible at this call site.
+                  // eslint-disable-next-line react-hooks/refs
                   initialData={formDataRef.current}
                 />
               )}
@@ -747,6 +795,9 @@ function CareerOnboardingContent({
                 <CareerIntentStep
                   onComplete={(data) => handleStepComplete('career-intent', data)}
                   isBusy={isBusy}
+                  // Workflow accumulator ref — safe to read during render here.
+                  // See PersonalDetailsStep above for full rationale.
+                  // eslint-disable-next-line react-hooks/refs
                   initialData={formDataRef.current}
                 />
               )}
@@ -754,6 +805,9 @@ function CareerOnboardingContent({
                 <SkillsStep
                   onComplete={(data) => handleStepComplete('skills', data)}
                   isBusy={isBusy}
+                  // Workflow accumulator ref — safe to read during render here.
+                  // See PersonalDetailsStep above for full rationale.
+                  // eslint-disable-next-line react-hooks/refs
                   initialData={formDataRef.current}
                 />
               )}
