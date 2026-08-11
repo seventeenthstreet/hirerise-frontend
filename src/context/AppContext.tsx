@@ -61,7 +61,7 @@ import {
   setAnalyticsFlow,
   clearAnalyticsFlow,
 } from '@/lib/analytics';
-import { useAppHydration } from '@/hooks/useAppHydration'; // RISK-02: network primitives extracted
+import { useAppHydration, RateLimitHydrationError } from '@/hooks/useAppHydration'; // RISK-02: network primitives extracted
 import { getSupabaseClient } from '@/lib/supabase/client';
 // FIX-2: Merged two separate `@/lib/query` import statements into one.
 // Previously lines 57–58 were:
@@ -169,18 +169,15 @@ setAnalyticsSession(SESSION_ID);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
-// Defined in AppContext.types.ts; re-exported here for public API compatibility.
+// Defined in AppContext.types.ts — import from there directly.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { AppContextValue } from './AppContext.types';
 import type { AppContextValue } from './AppContext.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FLOW ID CONSTANTS — canonical flow names; never hard-code strings
-// Defined in AppContext.constants.ts; re-exported here for public API compatibility.
+// FLOW ID CONSTANTS
+// Defined in AppContext.constants.ts — import from there directly.
 // ─────────────────────────────────────────────────────────────────────────────
-
-export { FLOW_IDS, type FlowId } from './AppContext.constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTEXT
@@ -489,6 +486,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // will self-cancel at its next checkpoint.
       const myGen = ++generation;
 
+      // WP-AV-04: per-cycle flag — true only if this cycle's fetchUser() hit
+      // the 429 rate-limit path. Read by the finally block below to skip
+      // setIsHydrated(true), since finally always runs even after the
+      // catch block's early `return` in that branch.
+      let rateLimited = false;
+
       // OBS Phase 1+2+10: create correlation IDs + start wall-clock timer for
       // this hydration cycle. Stored in refs so the finally block can emit
       // HYDRATION_END with the same IDs regardless of which code path exits.
@@ -641,7 +644,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (myGen === generation && !cancelled) {
           _strictModeBootCompleted = true;
         }
-      } catch {
+      } catch (caughtErr) {
+        // RATE-LIMIT GUARD (429):
+        //   fetchUser() throws RateLimitHydrationError when /users/me returns 429.
+        //   This is a transient server signal — not an auth failure. We must NOT:
+        //     - call setIsError(true)  → would redirect the user to /login
+        //     - let this hydration cycle be marked "complete"
+        //       → AuthCallbackPage sees isHydrated===true + null user and
+        //         redirects to /auth/login?error=auth_timeout
+        //   Instead: log a warn and set rateLimited so the finally block below
+        //   skips setIsHydrated(true) for this cycle. Supabase will fire
+        //   TOKEN_REFRESHED when the token next renews, which re-enters
+        //   hydrate('refresh') and retries fetchUser cleanly.
+        //
+        //   WP-AV-04 FIX: a bare `return` here does NOT skip the `finally`
+        //   block — that is JavaScript's try/finally semantics, not a bug in
+        //   the guard's intent. The original code relied on `return`
+        //   preventing `finally`'s setIsHydrated(true) from running; it does
+        //   not, so isHydrated was set true on every 429 anyway, which is the
+        //   actual cause of the auth_timeout redirect this guard was meant to
+        //   prevent. `rateLimited` is the real guard now.
+        if (caughtErr instanceof RateLimitHydrationError) {
+          const _ids = hydrationIdsRef.current ?? {};
+          logAuthEvent(AUTH_LOG_EVENTS.AUTH_HYDRATION_FAILED, _ids, { source, reason: 'rate_limited' }, 'warn');
+          rateLimited = true;
+          return;
+        }
         // OBS Phase 1+8: structured error log + telemetry counter
         const _ids = hydrationIdsRef.current ?? {};
         logAuthEvent(AUTH_LOG_EVENTS.AUTH_HYDRATION_FAILED, _ids, { source }, 'error');
@@ -650,7 +678,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (myGen === generation && !cancelled) setIsError(true);
       } finally {
         // OBS Phase 1+10: emit HYDRATION_END + metrics for the winning generation
-        if (myGen === generation && !cancelled) {
+        // WP-AV-04 FIX: skip entirely on the rate-limit path — this hydration
+        // cycle did not actually complete, so it must not be logged as ended,
+        // and (critically) isHydrated must stay false so AuthCallbackPage
+        // keeps waiting instead of treating the null `user` as a failed login.
+        if (myGen === generation && !cancelled && !rateLimited) {
           const _ids  = hydrationIdsRef.current ?? {};
           const _durationMs = hydrationTimerRef.current
             ? endTimer(hydrationTimerRef.current)
@@ -666,7 +698,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           hydrationTimerRef.current = null;
         }
         // Only the winning generation marks hydration as complete.
-        if (myGen === generation && !cancelled) setIsHydrated(true);
+        if (myGen === generation && !cancelled && !rateLimited) setIsHydrated(true);
 
         // STRICTMODE CANCEL FIX — reset hydrateOnce if this hydration was
         // cancelled before it completed (e.g. StrictMode double-mount teardown).
@@ -808,6 +840,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           queryClient.removeQueries({ queryKey: queryKeys.appEntry.all() });
 
           setUser(null);
+          // WP-AV-02E — Log: AppContext state update on the SIGNED_OUT path.
+          console.log("[AppContext] state", null);
           setIsError(false);   // FIX: clear stale error state from previous session
           setIsHydrated(true);
         }
@@ -867,8 +901,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // HOOK
 // ─────────────────────────────────────────────────────────────────────────────
+// useAppContext is defined in AppContext.hooks.ts — import from there directly.
 
-// useAppContext is defined in AppContext.hooks.ts; re-exported here for
-// public API compatibility — all existing imports continue to work unchanged.
-// eslint-disable-next-line react-refresh/only-export-components
+// ─────────────────────────────────────────────────────────────────────────────
+// RE-EXPORTS — keep '@/context/AppContext' as a single import surface
+// ─────────────────────────────────────────────────────────────────────────────
 export { useAppContext } from './AppContext.hooks';
+export { FLOW_IDS } from './AppContext.constants';
+export type { FlowId } from './AppContext.constants';

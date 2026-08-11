@@ -77,6 +77,9 @@ export const ACADEMIC_YEARS_LIST: readonly AcademicYear[] = [
   'class_12',
 ] as const;
 
+/**
+ * All subjects (for DB/validation purposes).
+ */
 export const ACADEMIC_SUBJECTS_LIST: readonly AcademicSubject[] = [
   'mathematics',
   'physics',
@@ -94,6 +97,91 @@ export const ACADEMIC_SUBJECTS_LIST: readonly AcademicSubject[] = [
   'political_science',
   'language_optional',
 ] as const;
+
+/**
+ * NCERT-aligned subjects available per academic year.
+ *
+ * Class 8–10: Core subjects only (NCERT standard curriculum).
+ *   - Science is assessed as Physics + Chemistry + Biology at board level.
+ *   - Social Science covers History, Geography, Civics, Economics as one paper.
+ *   - language_optional covers Hindi / Sanskrit / regional second language.
+ *
+ * Class 11–12: Stream-based subjects.
+ *   - Science stream: Physics, Chemistry, Mathematics, Biology / Computer Science.
+ *   - Commerce stream: Accountancy, Business Studies, Economics, Mathematics.
+ *   - Humanities stream: History, Geography, Political Science, Economics.
+ *   - language_optional covers elective language papers.
+ */
+export const SUBJECTS_BY_YEAR: Record<AcademicYear, readonly AcademicSubject[]> = {
+  class_8: [
+    'mathematics',
+    'english',
+    'social_science',
+    'physics',
+    'chemistry',
+    'biology',
+    'computer_science',
+    'language_optional',
+  ],
+  class_9: [
+    'mathematics',
+    'english',
+    'social_science',
+    'physics',
+    'chemistry',
+    'biology',
+    'computer_science',
+    'language_optional',
+  ],
+  class_10: [
+    'mathematics',
+    'english',
+    'social_science',
+    'physics',
+    'chemistry',
+    'biology',
+    'computer_science',
+    'language_optional',
+  ],
+  class_11: [
+    // Science stream
+    'physics',
+    'chemistry',
+    'mathematics',
+    'biology',
+    'computer_science',
+    // Commerce stream
+    'accountancy',
+    'business_studies',
+    'economics',
+    // Humanities stream
+    'history',
+    'geography',
+    'political_science',
+    // Common
+    'english',
+    'language_optional',
+  ],
+  class_12: [
+    // Science stream
+    'physics',
+    'chemistry',
+    'mathematics',
+    'biology',
+    'computer_science',
+    // Commerce stream
+    'accountancy',
+    'business_studies',
+    'economics',
+    // Humanities stream
+    'history',
+    'geography',
+    'political_science',
+    // Common
+    'english',
+    'language_optional',
+  ],
+};
 
 export const ACADEMIC_BOARD_TYPES_LIST: readonly AcademicBoardType[] = [
   'cbse',
@@ -132,7 +220,7 @@ export const ACADEMIC_SUBJECT_LABELS: Record<AcademicSubject, string> = {
   biology:           'Biology',
   computer_science:  'Computer Science',
   english:           'English',
-  social_science:    'Social Science',
+  social_science:    'Social Science (SST)',
   economics:         'Economics',
   commerce:          'Commerce',
   accountancy:       'Accountancy',
@@ -140,7 +228,7 @@ export const ACADEMIC_SUBJECT_LABELS: Record<AcademicSubject, string> = {
   history:           'History',
   geography:         'Geography',
   political_science: 'Political Science',
-  language_optional: 'Optional Language',
+  language_optional: 'Hindi / Sanskrit / 2nd Language',
 };
 
 export const ACADEMIC_BOARD_LABELS: Record<AcademicBoardType, string> = {

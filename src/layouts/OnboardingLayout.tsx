@@ -38,6 +38,7 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
+import { OnboardingEscapeHatch } from '@/components/onboarding/OnboardingEscapeHatch';
 
 interface OnboardingLayoutProps {
   children: ReactNode;
@@ -58,6 +59,20 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
   return (
     <div className="min-h-screen overflow-y-auto bg-background">
       {children}
+      {/*
+       * TEMPORARY WORKAROUND
+       * WP-AV-02E
+       *
+       * Remove after the Direction Resume Defect has been fully resolved
+       * and certified.
+       *
+       * Persistent "Change Direction" / "Logout" escape hatch, shown on every
+       * onboarding step (Professional + Student) before the Dashboard is
+       * reached. Mounted once here since OnboardingLayout already wraps all
+       * /onboarding/* routes — no per-page changes required. Renders null
+       * once onboarding is complete.
+       */}
+      <OnboardingEscapeHatch />
     </div>
   );
 }

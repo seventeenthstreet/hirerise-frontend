@@ -247,6 +247,7 @@ export async function getExperimentMetrics(
     signal,
   });
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RE-EXPORTS FROM metrics-types.ts
 // StepCompletionBreakdown and VariantConversionRow live in metrics-types.ts
@@ -254,3 +255,104 @@ export async function getExperimentMetrics(
 // existing imports from @/lib/api/metrics.
 // ─────────────────────────────────────────────────────────────────────────────
 export type { StepCompletionBreakdown, VariantConversionRow } from './metrics-types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WP-7 — XAI & SYSTEM HEALTH API FUNCTIONS
+//
+// RULES (inherited from this file):
+//   - All requests go through apiRequest<T>()
+//   - NO UI, NO business logic, NO state — pure transport + type mapping
+//
+// INTEGRATION FLAG:
+//   INTEGRATION_ENABLED is intentionally NOT applied to these three functions.
+//   The XAI and system-health endpoints live only on the hirerise-core backend.
+//   The metricsAdapter integration path is not used for these endpoints.
+//   WP-13 replaces the backend stub implementations, not this API layer.
+//
+// WP-13 COMPATIBILITY:
+//   When WP-13 replaces the backend stubs with real service calls the endpoint
+//   paths, response types, and function signatures here are all unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type {
+  XaiUsageMetrics,
+  XaiTierDistributionMetrics,
+  SystemHealthResponse,
+} from './metrics-types';
+
+export type {
+  XaiUsageMetrics,
+  XaiTierDistributionMetrics,
+  SystemHealthResponse,
+} from './metrics-types';
+
+/**
+ * GET /api/v1/metrics/xai-usage
+ *
+ * Returns XAI explanation pipeline usage and latency metrics.
+ * Phase 1: all numeric fields are 0 (zero-value stub).
+ * WP-13 will replace the backend stub with real aggregation.
+ *
+ * @param filters - Optional date range and segment filters.
+ * @param signal  - Optional AbortSignal for request cancellation.
+ * @throws {ApiClientError} On network failure or backend error.
+ */
+export async function getXaiUsageMetrics(
+  filters?: MetricFilters,
+  signal?: AbortSignal,
+): Promise<XaiUsageMetrics> {
+  warnInvalidParams('getXaiUsageMetrics', filters);
+  return apiRequest<XaiUsageMetrics>({
+    method: 'GET',
+    url:    '/api/v1/metrics/xai-usage',
+    params: filters as Record<string, unknown>,
+    signal,
+  });
+}
+
+/**
+ * GET /api/v1/metrics/xai-tier
+ *
+ * Returns XAI tier distribution and ai_augmentation exposure rate.
+ * Phase 1: all tier counts and exposure rate are 0 (zero-value stub).
+ * WP-13 will replace the backend stub with real scorecard aggregation.
+ *
+ * @param filters - Optional date range and segment filters.
+ * @param signal  - Optional AbortSignal for request cancellation.
+ * @throws {ApiClientError} On network failure or backend error.
+ */
+export async function getXaiTierMetrics(
+  filters?: MetricFilters,
+  signal?: AbortSignal,
+): Promise<XaiTierDistributionMetrics> {
+  warnInvalidParams('getXaiTierMetrics', filters);
+  return apiRequest<XaiTierDistributionMetrics>({
+    method: 'GET',
+    url:    '/api/v1/metrics/xai-tier',
+    params: filters as Record<string, unknown>,
+    signal,
+  });
+}
+
+/**
+ * GET /api/v1/system/health
+ *
+ * Returns a lightweight system health snapshot.
+ * Phase 1: status is always 'healthy', error_rate_24h is 0.
+ * WP-13 will wire real Firestore / Claude API connectivity probes.
+ *
+ * No filters accepted — health is always a point-in-time snapshot.
+ *
+ * @param signal - Optional AbortSignal for request cancellation.
+ * @throws {ApiClientError} On network failure. The backend catches its own
+ *   errors and returns a 200 degraded response, so true 5xx is rare here.
+ */
+export async function getSystemHealth(
+  signal?: AbortSignal,
+): Promise<SystemHealthResponse> {
+  return apiRequest<SystemHealthResponse>({
+    method: 'GET',
+    url:    '/api/v1/system/health',
+    signal,
+  });
+}

@@ -16,7 +16,19 @@
  * Route map (unchanged from original):
  *   education  → /onboarding
  *   career     → /dashboard
- *   market     → /market-insights
+ *   market     → /dashboard
+ *
+ * WP-ONBOARD-01 — Direction Redirect Regression Fix:
+ *   The backend previously returned '/education/onboarding' (and, for market,
+ *   '/market-insights') — routes that no longer exist in front/src/routes/
+ *   index.tsx. navigate(result.redirectTo) then sent users to the catch-all
+ *   404. The backend redirect map has been corrected (userDirection.routes.js),
+ *   but result.redirectTo still comes from an external response, so it is now
+ *   validated here against the routes the frontend router actually serves
+ *   before navigating — the same defensive check this page already applies
+ *   to everything else it renders. An invalid/stale value falls back to the
+ *   existing per-direction route map (DIRECTION_FALLBACK_ROUTES below), and
+ *   ultimately to ROUTES.ONBOARDING_ROOT — never to an unrecognized path.
  */
 
 import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
@@ -28,8 +40,66 @@ import { DirectionSelector } from '@/components/direction/DirectionSelector';
 import { QuotaBanner } from '@/components/common/QuotaBanner';
 import { QuotaExhaustedModal } from '@/components/common/QuotaExhaustedModal';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { ROUTES } from '@/routes/routes.constants';
 
 type Direction = 'education' | 'career' | 'market';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEFENSIVE ROUTING — WP-ONBOARD-01
+//
+// result.redirectTo comes from the backend (userDirection.routes.js). It is an
+// external response value, not something this app controls at the type level,
+// so it is validated against the routes the frontend router actually serves
+// before being passed to navigate(). This is what caught the original
+// '/education/onboarding' regression and prevents any future stale-route
+// value (from either source) from ever reaching react-router.
+//
+// DIRECTION_FALLBACK_ROUTES mirrors the backend's DIRECTION_ROUTES map and is
+// reused both as the fallback when result.redirectTo is absent (existing
+// behavior) and as part of the known-route allow-list (new).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DIRECTION_FALLBACK_ROUTES: Record<Direction, string> = {
+  education: ROUTES.ONBOARDING_ACADEMICS, // routes to the student onboarding module
+  career:    ROUTES.DASHBOARD,
+  market:    ROUTES.DASHBOARD, // MVP: market direction redirects to dashboard
+};
+
+// Routes this page may legitimately navigate to after direction selection.
+// Built from the canonical route constants (front/src/routes/routes.constants.ts)
+// — never hand-rolled — so this allow-list can't drift from the real router.
+const KNOWN_POST_DIRECTION_ROUTES = new Set<string>([
+  ROUTES.ONBOARDING_ROOT,
+  ...Object.values(DIRECTION_FALLBACK_ROUTES),
+]);
+
+/**
+ * Resolves the safe navigation target for a completed direction selection.
+ *
+ *   1. If the backend returned a redirectTo AND it's a route this app
+ *      actually serves → use it.
+ *   2. Otherwise → use the existing per-direction fallback map.
+ *
+ * Never returns a value outside KNOWN_POST_DIRECTION_ROUTES, so this page can
+ * never hand react-router a path that resolves to the catch-all 404.
+ */
+function resolvePostDirectionRoute(direction: Direction, redirectTo: string | undefined | null): string {
+  if (redirectTo && KNOWN_POST_DIRECTION_ROUTES.has(redirectTo)) {
+    return redirectTo;
+  }
+
+  if (redirectTo) {
+    // Stale/unrecognized value from the backend — log for observability so a
+    // future backend-side regression (like the original /education/onboarding
+    // bug) surfaces immediately instead of silently 404ing.
+    console.warn(
+      '[DirectionPage] Backend returned an unrecognized redirectTo — falling back to the known route for this direction.',
+      { direction, redirectTo },
+    );
+  }
+
+  return DIRECTION_FALLBACK_ROUTES[direction] ?? ROUTES.ONBOARDING_ROOT;
+}
 
 export default function DirectionPage() {
   const navigate = useNavigate();
@@ -192,16 +262,9 @@ function DirectionContent({ user, refreshUser }: { user: User | null; refreshUse
       // AppContext user has the correct user_type from the backend.
       await refreshUser();
 
-      if (result?.redirectTo) {
-        navigate(result.redirectTo);
-      } else {
-        const fallbackMap: Record<Direction, string> = {
-          education: '/education/onboarding', // routes to new student onboarding module
-          career:    '/dashboard',
-          market:    '/dashboard', // MVP: market direction redirects to dashboard
-        };
-        navigate(fallbackMap[direction]);
-      }
+      // WP-ONBOARD-01: validate before navigating — never trust an external
+      // redirectTo blindly. See resolvePostDirectionRoute() above.
+      navigate(resolvePostDirectionRoute(direction, result?.redirectTo));
     } catch (err: unknown) {
       const apiErr = err as { status?: number; quotaExhausted?: boolean; upgradeUrl?: string };
       if (apiErr?.status === 429 || apiErr?.quotaExhausted) {
@@ -215,7 +278,7 @@ function DirectionContent({ user, refreshUser }: { user: User | null; refreshUse
 
   const handleLogout = useCallback(async () => {
     await getSupabaseClient().auth.signOut();
-    navigate('/login', { replace: true });
+    navigate('/auth/login', { replace: true });
   }, [navigate]);
 
   return (

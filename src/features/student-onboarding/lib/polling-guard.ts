@@ -22,23 +22,35 @@
 /** Polling interval in ms during the 'processing' step. */
 export const PROCESSING_POLL_INTERVAL_MS = 5_000;
 
+/**
+ * How long to suppress polling after a rate-limit (429) response, in ms.
+ * The backend retryAfter hint is typically 60 s; we use the same floor here.
+ */
+export const RATE_LIMIT_BACKOFF_MS = 60_000;
+
 export interface PollingGuardResult {
   /** Interval in ms when polling is active, false when disabled. */
   readonly refetchInterval: number | false;
-  readonly mode: 'active' | 'inactive';
+  readonly mode: 'active' | 'inactive' | 'rate_limited';
 }
 
 /**
  * Computes whether polling should be active and what interval to use.
  *
- * Both conditions must be true to enable polling:
+ * All three conditions must be true to enable polling:
  *   1. currentStepId === 'processing'
  *   2. isOnboardingComplete === false
+ *   3. isRateLimited === false  (suppress polling during a 429 backoff window)
  */
 export function computePollingInterval(
   currentStepId: string,
   isOnboardingComplete: boolean,
+  isRateLimited = false,
 ): PollingGuardResult {
+  if (isRateLimited) {
+    return { refetchInterval: false, mode: 'rate_limited' };
+  }
+
   const shouldPoll = currentStepId === 'processing' && !isOnboardingComplete;
 
   return shouldPoll

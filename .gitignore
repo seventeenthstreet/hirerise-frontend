@@ -60,3 +60,4 @@ test-results
 # Misc
 *.pid
 *.seed
+vite.config.js

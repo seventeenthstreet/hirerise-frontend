@@ -101,11 +101,14 @@ export function uploadResume(file: File): Promise<UploadResumeResponse> {
   const form = new FormData();
   form.append('resume', file);
 
+  // No Content-Type header here — apiRequest() detects the FormData body and
+  // clears the default JSON header so the browser sets the correct
+  // `multipart/form-data; boundary=...` header itself. See the comment in
+  // lib/api/core/api-client.ts (apiRequest) for details.
   return apiRequest<UploadResumeResponse>({
-    url:     '/resumes',
-    method:  'POST',
-    data:    form,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    url:    '/api/v1/resumes',
+    method: 'POST',
+    data:   form,
   });
 }
 
@@ -118,10 +121,17 @@ export function uploadResume(file: File): Promise<UploadResumeResponse> {
  * Returns them sorted newest-first; the active resume has isActive === true.
  */
 export function listResumes(): Promise<ResumeRecord[]> {
-  return apiRequest<ResumeRecord[]>({
-    url:    '/resumes',
-    method: 'GET',
-  });
+  // requireData: true — guards against a silent `undefined` resolution
+  // (e.g. a no-content success response) reaching callers as if it were a
+  // valid empty list. Callers that need list data should get a catchable
+  // ApiClientError instead, not an undefined they have to know to check for.
+  return apiRequest<ResumeRecord[]>(
+    {
+      url:    '/api/v1/resumes',
+      method: 'GET',
+    },
+    { requireData: true },
+  );
 }
 
 /**
@@ -130,7 +140,7 @@ export function listResumes(): Promise<ResumeRecord[]> {
  */
 export function getResume(resumeId: string): Promise<ResumeRecord> {
   return apiRequest<ResumeRecord>({
-    url:    `/resumes/${resumeId}`,
+    url:    `/api/v1/resumes/${resumeId}`,
     method: 'GET',
   });
 }
@@ -146,7 +156,7 @@ export function getResume(resumeId: string): Promise<ResumeRecord> {
  */
 export function getResumeStatus(resumeId: string): Promise<ResumeStatusResponse> {
   return apiRequest<ResumeStatusResponse>({
-    url:    `/resumes/${resumeId}/status`,
+    url:    `/api/v1/resumes/${resumeId}/status`,
     method: 'GET',
   });
 }
@@ -161,7 +171,7 @@ export function getResumeStatus(resumeId: string): Promise<ResumeStatusResponse>
  */
 export function setActiveResume(resumeId: string): Promise<SetActiveResumeResponse> {
   return apiRequest<SetActiveResumeResponse>({
-    url:    '/resumes/set-active',
+    url:    '/api/v1/resumes/set-active',
     method: 'POST',
     data:   { resumeId },
   });
@@ -174,7 +184,7 @@ export function setActiveResume(resumeId: string): Promise<SetActiveResumeRespon
  */
 export function rescoreResume(resumeId: string): Promise<RescoreResumeResponse> {
   return apiRequest<RescoreResumeResponse>({
-    url:    `/resumes/${resumeId}/rescore`,
+    url:    `/api/v1/resumes/${resumeId}/rescore`,
     method: 'POST',
   });
 }
@@ -185,7 +195,7 @@ export function rescoreResume(resumeId: string): Promise<RescoreResumeResponse> 
  */
 export function refreshSignedUrl(resumeId: string): Promise<RefreshSignedUrlResponse> {
   return apiRequest<RefreshSignedUrlResponse>({
-    url:    `/resumes/${resumeId}/refresh-url`,
+    url:    `/api/v1/resumes/${resumeId}/refresh-url`,
     method: 'POST',
   });
 }
@@ -196,7 +206,7 @@ export function refreshSignedUrl(resumeId: string): Promise<RefreshSignedUrlResp
  */
 export function deleteResume(resumeId: string): Promise<void> {
   return apiRequest<void>({
-    url:    `/resumes/${resumeId}`,
+    url:    `/api/v1/resumes/${resumeId}`,
     method: 'DELETE',
   });
 }

@@ -51,15 +51,29 @@ import {
   DirectionPage, ResumePage, ReportPage,
   LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage,
   VerifyEmailPage, AuthCallbackPage,
-  OnboardingWelcome, OnboardingProfile, OnboardingAcademics, OnboardingActivities,
+  OnboardingWelcome, OnboardingProfile, OnboardingResumeUpload, OnboardingAcademics, OnboardingActivities,
   OnboardingCognitive, OnboardingIntelligence, OnboardingComplete, CareerOnboardingPage,
+  OnboardingProfileReview, OnboardingProfileComplete,
+  GuidedBuilderIndex, GuidedBuilderPersonal, GuidedBuilderEducation, GuidedBuilderExperience,
+  GuidedBuilderSkills, GuidedBuilderCareerGoals,
   DashboardHomePage,
   CareerProfilePage, CareerPathPage, CareerGraphPage, CareerReadinessPage,
   DigitalTwinPage, CareerSimulationPage,
   CopilotPage, AdvisorPage, RecommendationsPage, CoverLetterPage,
   AnalyticsPage, ChiDashboardPage, EngagementPage,
   ProfileSettingsPage, BillingPage,
-  AdminCmsPage, AdminGraphPage, AdminJobsPage, AdminWeightsPage, AdminIntelligencePage,
+  AdminCmsPage, AdminGraphPage, AdminJobsPage, AdminJobDetailPage, AdminWeightsPage, AdminIntelligencePage,
+  AdminMasterDataSkillsPage,
+  AdminMasterDataRolesPage,
+  AdminMasterDataCareerDomainsPage,
+  AdminMasterDataSkillClustersPage,
+  AdminMasterDataJobFamiliesPage,
+  AdminMasterDataEducationLevelsPage,
+  AdminMasterDataSalaryBenchmarksPage,
+  AdminMasterDataImportPage,
+  AdminDashboardPage, AdminXaiOperationsPage, AdminUsersPage, AdminUserDetailPage, AdminSettingsPage,
+  AdminAdministratorsPage, AdminAdministratorDetailPage,
+  AdminPermissionsCatalogPage, AdminPermissionDetailPage, AdminPermissionAssignmentsPage, AdminPermissionEvaluationPage,
   NotFoundPage, ServerErrorPage,
 } from './lazy-imports';
 
@@ -163,6 +177,101 @@ const routes: RouteObject[] = [
           <Suspense fallback={null}>
             <OnboardingGuard requiredStep="welcome">
               <OnboardingProfile />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/resume',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <OnboardingResumeUpload />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      // Guided Profile Builder (WP-PRO-09D). Same guard as 'profile' above —
+      // these are all part of the same professional onboarding flow, reached
+      // only after 'welcome'. Each step has its own real, deep-linkable route;
+      // 'build' itself redirects to whichever step the Progress API says is
+      // current.
+      {
+        path: 'profile/build',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderIndex />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/build/personal',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderPersonal />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/build/education',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderEducation />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/build/experience',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderExperience />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/build/skills',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderSkills />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/build/career-goals',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <GuidedBuilderCareerGoals />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/review',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <OnboardingProfileReview />
+            </OnboardingGuard>
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile/complete',
+        element: (
+          <Suspense fallback={null}>
+            <OnboardingGuard requiredStep="welcome">
+              <OnboardingProfileComplete />
             </OnboardingGuard>
           </Suspense>
         ),
@@ -350,12 +459,41 @@ const routes: RouteObject[] = [
       </Suspense>
     ),
     children: [
-      { index: true,           element: <Navigate to={ROUTES.ADMIN_CMS} replace /> },
+      // WP-ADMIN-03 Phase 2 — Enterprise Dashboard is now the /admin landing page.
+      { index: true,           element: <Suspense fallback={null}><AdminDashboardPage /></Suspense> },
       { path: 'cms',           element: <Suspense fallback={null}><AdminCmsPage /></Suspense> },
       { path: 'graph',         element: <Suspense fallback={null}><AdminGraphPage /></Suspense> },
       { path: 'jobs',          element: <Suspense fallback={null}><AdminJobsPage /></Suspense> },
+      { path: 'jobs/:jobId',   element: <Suspense fallback={null}><AdminJobDetailPage /></Suspense> }, // WP-ADMIN-COMP-06
       { path: 'weights',       element: <Suspense fallback={null}><AdminWeightsPage /></Suspense> },
       { path: 'intelligence',  element: <Suspense fallback={null}><AdminIntelligencePage /></Suspense> },
+      // WP-7 page existed on disk but had no route (orphaned) — now reachable.
+      { path: 'xai-operations', element: <Suspense fallback={null}><AdminXaiOperationsPage /></Suspense> },
+      { path: 'master-data/skills', element: <Suspense fallback={null}><AdminMasterDataSkillsPage /></Suspense> }, // WP-ADMIN-02A
+      // WP-ADMIN-COMP-03 — Master Data frontend completion.
+      { path: 'master-data/roles',             element: <Suspense fallback={null}><AdminMasterDataRolesPage /></Suspense> },
+      { path: 'master-data/career-domains',    element: <Suspense fallback={null}><AdminMasterDataCareerDomainsPage /></Suspense> },
+      { path: 'master-data/skill-clusters',    element: <Suspense fallback={null}><AdminMasterDataSkillClustersPage /></Suspense> },
+      { path: 'master-data/job-families',      element: <Suspense fallback={null}><AdminMasterDataJobFamiliesPage /></Suspense> },
+      { path: 'master-data/education-levels',  element: <Suspense fallback={null}><AdminMasterDataEducationLevelsPage /></Suspense> },
+      { path: 'master-data/salary-benchmarks', element: <Suspense fallback={null}><AdminMasterDataSalaryBenchmarksPage /></Suspense> },
+      { path: 'master-data/import',            element: <Suspense fallback={null}><AdminMasterDataImportPage /></Suspense> },
+      // WP-ADMIN-03 Phase 2 — placeholder landing pages only, no implementation.
+      { path: 'users',         element: <Suspense fallback={null}><AdminUsersPage /></Suspense> },
+      { path: 'users/:userId', element: <Suspense fallback={null}><AdminUserDetailPage /></Suspense> }, // WP-ADMIN-04 Phase 1B
+      // WP-ADMIN-05A — Enterprise Administrator Management (admin_principals,
+      // distinct from the application Users directory above).
+      { path: 'administrators',      element: <Suspense fallback={null}><AdminAdministratorsPage /></Suspense> },
+      { path: 'administrators/:uid', element: <Suspense fallback={null}><AdminAdministratorDetailPage /></Suspense> },
+      // WP-ADMIN-04F-09 — Enterprise Permission Management UI. Static
+      // 'assignments'/'evaluate' segments are siblings of, not children
+      // under, the dynamic 'registry/:identity' detail route — see
+      // routes.constants.ts's ADMIN_PERMISSION_DETAIL comment for why.
+      { path: 'permissions',                    element: <Suspense fallback={null}><AdminPermissionsCatalogPage /></Suspense> },
+      { path: 'permissions/registry/:identity', element: <Suspense fallback={null}><AdminPermissionDetailPage /></Suspense> },
+      { path: 'permissions/assignments',        element: <Suspense fallback={null}><AdminPermissionAssignmentsPage /></Suspense> },
+      { path: 'permissions/evaluate',           element: <Suspense fallback={null}><AdminPermissionEvaluationPage /></Suspense> },
+      { path: 'settings',      element: <Suspense fallback={null}><AdminSettingsPage /></Suspense> },
     ],
   },
 

@@ -61,6 +61,7 @@ import { applyPageGuards, getCHIMissingRequirements } from '@/lib/guards';
 import type { User } from '@/hooks/useUser';
 
 // ── UI Components ──────────────────────────────────────────────────────────────
+import { GenerateCareerReportCard } from '@/components/dashboard/GenerateCareerReportCard';
 import { CHIScoreWidget }       from '@/components/dashboard/CHIScoreWidget';
 import { SkillsPriorityWidget } from '@/components/dashboard/SkillsPriorityWidget';
 import { OpportunitiesWidget }  from '@/components/dashboard/OpportunitiesWidget';
@@ -331,6 +332,12 @@ function DashboardContent({ user }: { user: User }) {
             </ul>
           </div>
         )}
+
+        {/* AI Career Report — moved here from onboarding completion (WP-PRO-03).
+            Generation is optional and its failure never blocks Dashboard access. */}
+        <div className="mb-6">
+          <GenerateCareerReportCard />
+        </div>
 
         {/* ── Main grid ─────────────────────────────────────────────────────
             Phase 3 Refinement 6: each WidgetErrorFallback receives onRetry.

@@ -1,5 +1,3 @@
-
-
 /**
  * src/app/signup/page.tsx
  *
@@ -108,7 +106,7 @@ export default function SignupPage() {
               email to verify, or{' '}
               <button
                 type="button"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/auth/login')}
                 className="underline underline-offset-2 hover:opacity-80"
               >
                 sign in
@@ -121,7 +119,7 @@ export default function SignupPage() {
             Didn&apos;t receive it? Check your spam folder or{' '}
             <button
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/auth/login')}
               className="underline underline-offset-2 hover:text-foreground"
             >
               sign in
@@ -213,7 +211,7 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <a href="/login" className="font-medium text-foreground underline underline-offset-2 hover:opacity-80">
+          <a href="/auth/login" className="font-medium text-foreground underline underline-offset-2 hover:opacity-80">
             Sign in
           </a>
         </p>

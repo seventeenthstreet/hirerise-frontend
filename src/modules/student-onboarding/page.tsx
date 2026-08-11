@@ -129,7 +129,7 @@ function StudentOnboardingContent() {
           });
           break;
         case 'result':
-          navigate('/education/onboarding', { replace: true });
+          navigate('/onboarding/student/academics', { replace: true });
           break;
         default:
           break;

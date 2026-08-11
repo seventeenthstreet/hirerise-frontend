@@ -51,6 +51,10 @@ export interface User {
   // Subscription
   plan?: string;
   tier?: 'free' | 'pro' | 'enterprise';
+  // Authorization — mirrors backend req.user.role / admin_principals model
+  // (see core/src/middleware/requireAdmin.middleware.js). Populated from
+  // GET /users/me's `role` field. WP-ADMIN-02A-FIX.
+  role?: string | null;
   // Quota
   credits?: { remainingUses: number };
   quota?: QuotaMap;

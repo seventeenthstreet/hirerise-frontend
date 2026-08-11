@@ -110,9 +110,11 @@ export interface PollingEnabledEvent extends BaseDiagnosticEvent {
 /** polling_disabled — polling interval cleared (step changed or flow complete) */
 export interface PollingDisabledEvent extends BaseDiagnosticEvent {
   readonly event: 'polling_disabled';
-  readonly severity: 'info';
+  readonly severity: 'info' | 'warn';
   readonly metadata: {
-    readonly reason: 'step_changed' | 'flow_complete' | 'recovery_active' | 'version_mismatch';
+    readonly reason: 'step_changed' | 'flow_complete' | 'recovery_active' | 'version_mismatch' | 'rate_limited';
+    /** Present only when reason === 'rate_limited'. Duration of the backoff window in ms. */
+    readonly backoffMs?: number;
   };
 }
 

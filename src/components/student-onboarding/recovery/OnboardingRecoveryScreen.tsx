@@ -153,7 +153,7 @@ export function OnboardingRecoveryScreen({
 
   function handlePrimary() {
     if (scenario === 'unauthorized') {
-      navigate('/login', { replace: true });
+      navigate('/auth/login', { replace: true });
     } else {
       onRetry();
     }
@@ -168,7 +168,7 @@ export function OnboardingRecoveryScreen({
       isRecoverable:    false,
       primaryContext:   scenario,
     });
-    navigate('/education/onboarding', { replace: true });
+    navigate('/onboarding/student/academics', { replace: true });
   }
 
   function handleDashboard() {

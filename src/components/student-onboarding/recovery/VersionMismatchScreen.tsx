@@ -1,5 +1,3 @@
-
-
 /**
  * @file components/student-onboarding/recovery/VersionMismatchScreen.tsx
  *
@@ -118,7 +116,7 @@ export function VersionMismatchScreen({
         stepAtRestart: currentStepId,
       },
     });
-    navigate('/education/onboarding', { replace: true });
+    navigate('/onboarding/student/academics', { replace: true });
   }
 
   function handleRefresh() {

@@ -10,6 +10,7 @@
  * This module only makes requests and returns typed responses.
  */
 
+import { getAccessToken } from '@/lib/supabase/client';
 import type {
   AddActivityInput,
   AddActivityResponse,
@@ -28,6 +29,11 @@ const BASE = '/api/v1/student-onboarding/v2/step/activities';
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 async function parseOrThrow<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
@@ -50,6 +56,7 @@ export async function fetchActivities(
   const res = await fetch(BASE, {
     method:      'GET',
     credentials: 'include',
+    headers:     await authHeaders(),
     signal,
   });
   return parseOrThrow<GetActivitiesResponse>(res);
@@ -66,7 +73,7 @@ export async function addActivity(
   const res = await fetch(`${BASE}/add`, {
     method:      'POST',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
+    headers:     { 'Content-Type': 'application/json', ...await authHeaders() },
     // Map camelCase → snake_case for the backend
     body: JSON.stringify({
       activity_key:      input.activityKey,
@@ -95,7 +102,7 @@ export async function updateActivityDepth(
   const res = await fetch(`${BASE}/${encodeURIComponent(activityKey)}/depth`, {
     method:      'PUT',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
+    headers:     { 'Content-Type': 'application/json', ...await authHeaders() },
     body: JSON.stringify({
       activity_category: input.activityCategory,
       proficiency_level: input.proficiencyLevel,
@@ -121,6 +128,7 @@ export async function deleteActivity(
   const res = await fetch(`${BASE}/${encodeURIComponent(activityKey)}`, {
     method:      'DELETE',
     credentials: 'include',
+    headers:     await authHeaders(),
     signal,
   });
   await parseOrThrow<{ ok: boolean }>(res);
@@ -138,7 +146,7 @@ export async function addAchievement(
   const res = await fetch(`${BASE}/${encodeURIComponent(activityKey)}/achievements`, {
     method:      'POST',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
+    headers:     { 'Content-Type': 'application/json', ...await authHeaders() },
     body: JSON.stringify({
       achievement_title:    input.achievementTitle,
       achievement_level:    input.achievementLevel,
@@ -161,6 +169,7 @@ export async function deleteAchievement(
   const res = await fetch(`${BASE}/achievements/${encodeURIComponent(achievementId)}`, {
     method:      'DELETE',
     credentials: 'include',
+    headers:     await authHeaders(),
     signal,
   });
   await parseOrThrow<{ ok: boolean }>(res);
@@ -177,7 +186,7 @@ export async function saveReflection(
   const res = await fetch(`${BASE}/reflection`, {
     method:      'POST',
     credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
+    headers:     { 'Content-Type': 'application/json', ...await authHeaders() },
     body: JSON.stringify({
       favorite_activity_key:     input.favoriteActivityKey    ?? null,
       pursue_seriously_key:      input.pursuesSeriouslyKey    ?? null,
@@ -198,6 +207,7 @@ export async function commitActivities(
   const res = await fetch(`${BASE}/commit`, {
     method:      'POST',
     credentials: 'include',
+    headers:     await authHeaders(),
     signal,
   });
   return parseOrThrow<CommitActivitiesResponse>(res);

@@ -1,60 +1,87 @@
 /**
  * src/lib/env.ts
  *
- * Environment variable validation — called once at app startup.
+ * Environment variable validation — called once at app startup
+ * (src/main.tsx, before the app is mounted — see FIX-08).
  *
- * Fails fast with a clear error message if any required variable is
- * missing, preventing cryptic runtime failures deep in the call stack.
+ * FIX-07 (MEDIUM): Previously this file used `process.env.NEXT_PUBLIC_*`,
+ * a Next.js convention that does not exist in a Vite browser bundle —
+ * `process.env.NEXT_PUBLIC_SUPABASE_URL` is always `undefined` under Vite.
+ * The function was never called anywhere in the codebase, so this was
+ * dormant — but if anyone had wired `validateEnv()` into bootstrap as a
+ * "fix" without updating the variable names, the app would have thrown on
+ * every single startup, since the required vars could never be found.
  *
- * Call in the root layout (server side) or in a top-level initializer:
+ * NOW:
+ *  - Reads exclusively from `import.meta.env.VITE_*` (Vite-only — no
+ *    NEXT_PUBLIC_* fallback, matching the architecture rule that all env
+ *    access must use `import.meta.env.VITE_*`).
+ *  - Validates the same variables that src/lib/supabase/client.ts requires
+ *    (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY), so a misconfiguration is
+ *    caught at bootstrap with a single, actionable console error rather
+ *    than surfacing later as a confusing Supabase auth failure.
+ *  - Throws a single Error listing every missing variable, with guidance
+ *    about the historical UTF-8 BOM issue that previously caused
+ *    VITE_SUPABASE_URL to appear "missing" even when present in
+ *    .env.local.
  *
- *   import { validateEnv } from '@/lib/env';
- *   validateEnv();
+ * Usage (src/main.tsx):
  *
- * This file intentionally has zero dependencies so it can be imported
- * anywhere without pulling in the Supabase client or other heavy modules.
+ *   import { validateEnv } from './lib/env';
+ *   try {
+ *     validateEnv();
+ *   } catch (err) {
+ *     console.error(err instanceof Error ? err.message : err);
+ *   }
  */
 
 const REQUIRED_ENV_VARS = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  // NEXT_PUBLIC_API_BASE_URL removed from required list.
-  // Browser requests now use relative paths (Next.js proxy) — the env var
-  // is only needed by server-side Route Handlers (API_BASE_URL in .env).
-  // Keeping it optional here prevents startup failures in environments
-  // where only API_BASE_URL is set (e.g. production server containers).
+  'VITE_SUPABASE_URL',
+  'VITE_SUPABASE_ANON_KEY',
 ] as const;
 
 type RequiredEnvVar = (typeof REQUIRED_ENV_VARS)[number];
 
 /**
- * Validates that all required environment variables are present.
+ * Validates that all required Vite environment variables are present and
+ * non-empty.
+ *
  * Throws a descriptive Error listing every missing variable at once,
  * rather than failing on the first one.
  *
- * Safe to call in both server and client contexts — all required vars
- * are NEXT_PUBLIC_ and available on both sides.
+ * Safe to call from browser code only — `import.meta.env` is a Vite
+ * browser/SSR-client construct, not available under plain Node without
+ * Vite's runtime.
  */
 export function validateEnv(): void {
+  const env = import.meta.env as Record<string, string | undefined>;
+
   const missing: RequiredEnvVar[] = REQUIRED_ENV_VARS.filter(
-    (key) => !process.env[key],
+    (key) => !env[key],
   );
 
   if (missing.length > 0) {
     throw new Error(
       `[env] Missing required environment variable(s):\n` +
         missing.map((key) => `  • ${key}`).join('\n') +
-        `\n\nCheck your .env.local file and ensure these are set before starting.`,
+        `\n\n` +
+        `Check front/.env.local and ensure these are set, then restart ` +
+        `"npm run dev".\n\n` +
+        `If VITE_SUPABASE_URL is set in .env.local but still reported as ` +
+        `missing, check the file for a leading UTF-8 byte-order-mark (BOM) ` +
+        `on the first line — it corrupts the first variable name so Vite ` +
+        `never sees it. Re-save the file as UTF-8 without BOM.`,
     );
   }
 }
 
 /**
- * Type-safe accessor for a validated env var.
+ * Type-safe accessor for a validated Vite env var.
  * Use after validateEnv() has confirmed the value is present.
  */
 export function getEnv(key: RequiredEnvVar): string {
-  const value = process.env[key];
+  const env = import.meta.env as Record<string, string | undefined>;
+  const value = env[key];
   if (!value) {
     throw new Error(`[env] ${key} is not set. Did you call validateEnv()?`);
   }

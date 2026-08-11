@@ -1,82 +1,77 @@
-
-
 /**
- * src/app/auth/callback/page.tsx
+ * src/pages/auth/AuthCallbackPage.tsx
  *
  * OAuth callback landing page.
  *
- * Why a client page instead of a server route.ts?
- *  The Supabase browser client has `detectSessionInUrl: true`.
- *  When this page mounts, the client automatically detects ?code= in the URL,
- *  exchanges it for a session via PKCE, persists it to localStorage, and fires
- *  the SIGNED_IN auth state change event.
+ * FIX-03 (HIGH): Removed the duplicate `supabase.auth.onAuthStateChange(...)`
+ * subscription that previously lived in this page. AppContext is the single
+ * source of truth for auth state — no component, guard, page, hook, or
+ * service should create independent auth subscriptions.
  *
- *  AppContext's onAuthStateChange listener picks up SIGNED_IN → calls hydrate()
- *  → fetches /users/me → sets user → page.tsx routes to the right destination.
- *
- *  A server route.ts cannot do this because:
- *   1. It runs before the browser client exists — no detectSessionInUrl.
- *   2. exchangeCodeForSession server-side with persistSession:false discards
- *      the session immediately — the browser never receives it.
- *   3. The PKCE code is single-use — once the server consumes it, the browser
- *      client cannot exchange it again.
- *
- * This page intentionally does nothing except show a loading indicator.
- * All session logic is handled by the Supabase client automatically.
- *
- * A-04 / N-04 — Callback timeout race fix:
- *   Previously, the timeout handler and the SIGNED_IN handler both called
- *   router.replace() without coordinating. In a slow-network scenario:
- *     1. Supabase code exchange takes >8s → timeout fires → /login redirect
- *     2. Supabase exchange completes 200ms later → SIGNED_IN fires → / redirect
- *   Result: two competing router.replace() calls, partial auth state, stuck / page.
- *
- *   Fix: a `redirected` ref ensures exactly one redirect fires per mount.
- *   The first caller (either SIGNED_IN or the timeout) sets redirected=true
- *   synchronously before navigating. The second caller sees the flag and exits.
- *   This collapses two racing redirect paths into a single deterministic outcome.
+ * How it works now:
+ *  - The Supabase browser client has `detectSessionInUrl: true`. When this
+ *    page mounts, the client automatically detects `?code=` in the URL,
+ *    exchanges it for a session via PKCE, and persists it to localStorage.
+ *  - That exchange fires SIGNED_IN (or INITIAL_SESSION) on Supabase's auth
+ *    listener. AppContext's single `onAuthStateChange` subscription picks
+ *    this up, calls hydrate('login'), fetches /app-entry + /users/me, and
+ *    sets `user` + `isHydrated`.
+ *  - This page simply WAITS for AppContext to report `isHydrated === true`,
+ *    then redirects:
+ *      - `isError` or no `user`        → /auth/login?error=auth_timeout
+ *      - `user` present                → /  (AppEntryPage routes onward)
+ *  - A safety timeout still exists in case hydration never completes
+ *    (e.g. the PKCE code was invalid/already used and no auth event ever
+ *    fires). It checks `isHydrated` via a ref so it never races a second
+ *    redirect against the AppContext-driven one.
  */
 
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAppContext } from '@/context/AppContext';
+
+const CALLBACK_TIMEOUT_MS = 8_000;
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
-  // A-04: single-redirect guard — prevents competing router.replace() calls
-  // between the SIGNED_IN handler and the safety timeout.
-  const redirected = useRef(false);
+  const { isHydrated, isError, user } = useAppContext();
 
+  // Single-redirect guard — prevents a competing redirect from the safety
+  // timeout after AppContext-driven hydration has already navigated away.
+  const redirectedRef = useRef(false);
+
+  // Mirror isHydrated/isError/user into refs so the timeout callback (set up
+  // once on mount) can read the latest values without re-registering.
+  const stateRef = useRef({ isHydrated, isError, user });
+  stateRef.current = { isHydrated, isError, user };
+
+  // Redirect once AppContext finishes hydrating.
   useEffect(() => {
-    // The Supabase client exchanges the ?code= automatically on mount
-    // due to detectSessionInUrl: true. We just need to wait for it and
-    // then navigate — AppContext's onAuthStateChange handles user hydration.
-    const supabase = getSupabaseClient();
+    if (!isHydrated || redirectedRef.current) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        // A-04: guard against the timeout having already redirected.
-        if (redirected.current) return;
-        redirected.current = true;
-        subscription.unsubscribe();
-        navigate('/', { replace: true });
-      }
-    });
+    redirectedRef.current = true;
 
-    // Safety timeout — if no SIGNED_IN fires within 8 seconds, something went
-    // wrong (e.g. code already used, network failure). Send to login.
+    if (isError || !user) {
+      navigate('/auth/login?error=auth_timeout', { replace: true });
+      return;
+    }
+
+    navigate('/', { replace: true });
+  }, [isHydrated, isError, user, navigate]);
+
+  // Safety timeout — if AppContext never reaches isHydrated (e.g. the PKCE
+  // code was invalid/already used and no auth event fires at all), send the
+  // user back to login rather than leaving them on this page forever.
+  useEffect(() => {
     const timeout = setTimeout(() => {
-      // A-04: guard against SIGNED_IN having already redirected.
-      if (redirected.current) return;
-      redirected.current = true;
-      subscription.unsubscribe();
-      navigate('/login?error=auth_timeout', { replace: true });
-    }, 8000);
+      if (redirectedRef.current) return;
+      if (stateRef.current.isHydrated) return; // already handled by the effect above
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+      redirectedRef.current = true;
+      navigate('/auth/login?error=auth_timeout', { replace: true });
+    }, CALLBACK_TIMEOUT_MS);
+
+    return () => clearTimeout(timeout);
   }, [navigate]);
 
   return (

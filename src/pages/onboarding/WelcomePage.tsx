@@ -13,6 +13,11 @@
  *     continue browsing or click upgrade.
  *  6. [HARDENING #4] Guard result memoization: requireDirection result is
  *     wrapped in useMemo to prevent redundant recomputation on re-renders.
+ *  7. [WP-ENTRY-01B] guardReady latch: requireDirection() now evaluates for
+ *     ALL users once post-commit state is settled (previously skipped
+ *     entirely whenever user_type was null, which meant a user who reached
+ *     this page directly with no direction ever selected was never sent to
+ *     /direction). See the guardReady comment below for full detail.
  *
  * All other logic unchanged — no working flows broken.
  */
@@ -26,8 +31,13 @@ import { useQuota } from '@/hooks/useQuota';
 // useAnalytics: step/action tracking moved to hook layer
 import { requireDirection } from '@/lib/guards';
 import { useOnboardingAnalytics } from '@/features/onboarding'; // RISK-05: use public feature index
-import { generateCareerReport } from '@/features/onboarding/api/generateCareerReport';
 // analytics lifecycle is now owned by useOnboardingAnalytics
+//
+// WP-PRO-03: career report generation is intentionally NOT imported here.
+// Onboarding completion must not depend on AI generation succeeding — see
+// handleSubmit below. Report generation now lives on the Dashboard as an
+// independent action (reuses the same generateCareerReport service/hook,
+// e.g. via useGenerateCareerReport / CompletionScreen's existing pattern).
 import { OnboardingSteps } from '@/components/onboarding/OnboardingSteps';
 import { QuotaBanner } from '@/components/common/QuotaBanner';
 import { QuotaExhaustedModal } from '@/components/common/QuotaExhaustedModal';
@@ -41,22 +51,57 @@ export default function OnboardingPage() {
   // ── Global user (no extra fetch) ──────────────────────────────────────────
   const { user, isHydrated, refreshUser } = useAppContext();
 
+  // ── guardReady latch (WP-ENTRY-01B) ───────────────────────────────────────
+  // Reused verbatim from the pattern already established in
+  // pages/direction/DirectionPage.tsx for the identical class of race.
+  //
+  // PREVIOUSLY: this guard was suppressed entirely whenever user.user_type
+  // was null ("treat null as not-yet-resolved"), to avoid re-triggering the
+  // infinite-redirect-loop this file's HARDENING comments describe: right
+  // after a direction-switch or fresh direction selection, AppContext's user
+  // can still read user_type=null on this page's first render because
+  // React has ENQUEUED the setUser() update from refreshUser() but not yet
+  // COMMITTED it. Evaluating requireDirection() against that pre-commit
+  // state would incorrectly redirect to /direction even though the user
+  // really does have a direction.
+  //
+  // PROBLEM WITH THE OLD FIX: it didn't distinguish "user_type is null
+  // because the commit hasn't landed yet" from "user_type is null because
+  // the user genuinely never selected a direction" — it deferred forever in
+  // both cases. A user who reached the bare /onboarding URL directly (deep
+  // link, bookmark, browser back) with no direction ever set was never
+  // redirected to /direction (WP-ENTRY-01A, residual gap #1).
+  //
+  // THE FIX: give React exactly one commit cycle to flush any pending
+  // setUser() update before evaluating the guard at all — the same
+  // guardReady latch DirectionPage.tsx already uses for its own,
+  // structurally identical race. On the first render guardReady is false,
+  // so the guard is skipped (spinner shown) regardless of user_type; the
+  // effect below flips it to true right after commit, and the guard then
+  // evaluates against settled state. A genuinely undirected user now
+  // reliably gets user_type=null on the settled read and is redirected;
+  // a user who just selected/switched direction now reliably gets the
+  // freshly-committed user_type and is NOT redirected. Same mechanism,
+  // same safety, one extra case now covered.
+  const [guardReady, setGuardReady] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGuardReady(true);
+    return () => { setGuardReady(false); };
+  }, []);
+
   // ── [HARDENING #4] Guard result memoization ───────────────────────────────
   // requireDirection is a pure function — useMemo ensures it only runs when
   // user actually changes, not on every parent re-render.
   //
-  // FIX: Gate on user.user_type being non-null, not just user being non-null.
-  // After direction selection, navigate('/onboarding') fires immediately but
-  // React Query's invalidateQueries refetch races the page mount. The page can
-  // arrive with isHydrated=true, user non-null, but user.user_type still null
-  // (stale cache). Without this guard, requireDirection(user) sees user_type=null
-  // → returns block('/direction') → redirect fires → page bounces back to /direction
-  // in an infinite loop. Treating user_type=null as "not yet resolved" (same as
-  // !isHydrated) defers the guard until the refetch delivers the updated user.
+  // guardReady gates evaluation (see latch above) instead of the previous
+  // `user?.user_type` truthiness check — requireDirection() already handles
+  // user_type === null correctly (blocks to /direction); it just needed to
+  // be evaluated against settled, post-commit state.
   const guardResult = useMemo(
-    () => (isHydrated && user?.user_type ? requireDirection(user) : null),
+    () => (guardReady && isHydrated ? requireDirection(user) : null),
      
-    [user, isHydrated],
+    [guardReady, user, isHydrated],
   );
 
   // ── PRE-RENDER GUARD — redirect via useEffect, never during render ─────────
@@ -66,20 +111,27 @@ export default function OnboardingPage() {
   // phase — the correct React pattern for imperative navigation side-effects.
   const redirectingRef = useRef(false);
   useEffect(() => {
+    // Reset redirect latch when guard readiness resets (e.g. StrictMode cleanup) —
+    // mirrors DirectionPage.tsx's identical reset.
+    if (!guardReady) {
+      redirectingRef.current = false;
+      return;
+    }
     if (guardResult && !guardResult.allowed && !redirectingRef.current) {
       redirectingRef.current = true;
       navigate(guardResult.redirectTo, { replace: true });
     }
-  }, [guardResult, navigate]);
+  }, [guardReady, guardResult, navigate]);
+
+  // Still hydrating, or the guard hasn't had its post-commit read yet —
+  // show the spinner rather than evaluating against stale state.
+  if (!isHydrated || !guardReady) {
+    return <PageLoading label="Loading…" />;
+  }
 
   // While redirect is in flight, render nothing
   if (guardResult && !guardResult.allowed) {
     return null;
-  }
-
-  // Still hydrating
-  if (!isHydrated) {
-    return <PageLoading label="Loading…" />;
   }
 
   if (!user) return null;
@@ -107,7 +159,7 @@ function StudentRedirect() {
   useEffect(() => {
     if (!redirectedRef.current) {
       redirectedRef.current = true;
-      navigate('/education/onboarding', { replace: true });
+      navigate('/onboarding/student/academics', { replace: true });
     }
   }, [navigate]);
   return <PageLoading label="Loading your onboarding…" />;
@@ -192,13 +244,12 @@ function OnboardingContent({
   const [quotaModalOpen, setQuotaModalOpen] = useState(false); // [HARDENING #3]
   const [upgradeUrl,     setUpgradeUrl]     = useState<string | null>(null);
   const [submitError,    setSubmitError]    = useState<string | null>(null);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   // Set to true after submitOnboarding + refreshUser() succeed.
   // Signals the already-complete useEffect to navigate once React has committed
   // the updated AppContext user -- prevents the race where router.push fires
   // before setUser() flushes, causing the dashboard guard to see stale flags
   // and bounce the user back to /onboarding (the blank-page bug).
-  const [pendingPostSubmitNav, _setPendingPostSubmitNav] = useState(false);
+  const [pendingPostSubmitNav, setPendingPostSubmitNav] = useState(false);
 
   // ── Quota ─────────────────────────────────────────────────────────────────
   // [HARDENING #3] onQuotaExhausted now opens modal instead of swapping page.
@@ -248,7 +299,7 @@ function OnboardingContent({
     // navigate. Using router.replace avoids leaving /onboarding in history.
     if (pendingPostSubmitNav) {
       if (user_type === 'student') {
-        navigate('/education/onboarding', { replace: true });
+        navigate('/onboarding/student/academics', { replace: true });
       } else {
         navigate(resume_uploaded ? '/dashboard' : '/resume', { replace: true });
       }
@@ -256,7 +307,7 @@ function OnboardingContent({
     }
 
     if (user_type === 'student' && (student_onboarding_complete || onboarding_completed)) {
-      navigate('/education/onboarding', { replace: true });
+      navigate('/onboarding/student/academics', { replace: true });
       return;
     }
     if (user_type === 'professional' && (professional_onboarding_complete || onboarding_completed)) {
@@ -361,24 +412,17 @@ function OnboardingContent({
 
         await refreshUser();
 
-        // ── TASK 1: Generate career report ──────────────────────────────
-        // After onboarding is submitted and user is refreshed, call the
-        // report endpoint, store the result temporarily in sessionStorage,
-        // then navigate to /report.
-        setIsGeneratingReport(true);
-        try {
-          const result = await generateCareerReport();
-          sessionStorage.setItem('careerReport', JSON.stringify(result));
-          navigate('/report', { replace: true });
-        } catch (reportErr: unknown) {
-          const apiErr = reportErr as { message?: string };
-          setSubmitError(
-            apiErr?.message ||
-            'Failed to generate your report. Please try again.',
-          );
-        } finally {
-          setIsGeneratingReport(false);
-        }
+        // WP-PRO-03: Onboarding's job ends here — the profile has been
+        // created and completion is recorded. AI career-report generation
+        // is a separate, optional Dashboard action (see DashboardHomePage)
+        // and must never block or fail onboarding completion.
+        //
+        // Reuse the existing post-submit navigation effect (below) rather
+        // than navigating here directly — it already waits for React to
+        // commit the refreshUser() user update before redirecting, so the
+        // destination guard (student academics / dashboard / resume) sees
+        // correct post-completion flags and doesn't bounce.
+        setPendingPostSubmitNav(true);
       } catch (err: unknown) {
         // [PHASE 1] funnelContract.error + captureError already fired in hook.
         // Page handles quota UI + error message only.
@@ -401,7 +445,7 @@ function OnboardingContent({
         );
       }
     },
-    [submitOnboarding, refreshUser, navigate, quota, clearFlowId],
+    [submitOnboarding, refreshUser, quota, clearFlowId],
   );
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -450,7 +494,7 @@ function OnboardingContent({
           variant={variantState}
           onStepChange={handleStepChange}
           onSubmit={handleSubmit}
-          isSubmitting={isSubmitting || isGeneratingReport}
+          isSubmitting={isSubmitting}
           onChangeDirection={handleChangeDirection}
           isResettingDirection={resetDirectionMutation.isPending}
         />

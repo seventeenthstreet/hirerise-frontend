@@ -57,6 +57,35 @@ import type { User } from '@/hooks/useUser';
 import { logEvent, createEvent } from '@/lib/observability';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SENTINEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Thrown by fetchUser() when /users/me responds with 429 (rate_limit).
+ *
+ * WHY A SENTINEL INSTEAD OF RETURNING NULL:
+ *   Returning null from fetchUser() signals "no profile yet" (e.g. new OAuth
+ *   user), which is a valid success path. hydrate() in AppContext sees null,
+ *   reaches its finally block, and calls setIsHydrated(true) — completing
+ *   hydration with user=null. AuthCallbackPage then treats null user as an
+ *   auth failure and redirects to /auth/login.
+ *
+ *   A 429 is NOT a profile-absent signal — the user exists, the server is
+ *   just overloaded. We need hydrate() to catch this, skip setIsError() (it's
+ *   transient), and also skip setIsHydrated(true) (hydration didn't succeed).
+ *   The next TOKEN_REFRESHED from Supabase retries the full cycle cleanly.
+ *
+ * AppContext catches this in hydrate()'s catch block via instanceof check and
+ * handles it as a transient no-op: no isError, no isHydrated flip.
+ */
+export class RateLimitHydrationError extends Error {
+  constructor() {
+    super('fetchUser: /users/me returned 429 (rate_limit) — hydration deferred');
+    this.name = 'RateLimitHydrationError';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -188,6 +217,12 @@ export function useAppHydration({
         ...(signal ? { signal } : {}),
       });
 
+      // WP-AV-02E — Log: immediately after the API request succeeds.
+      // NOTE: apiClient() already unwraps the backend's {success, data} envelope,
+      // so `payload` here is the equivalent of `response.data` from the wire —
+      // i.e. { user, credits, quota }.
+      console.log("[Hydration] API", payload);
+
       // A null/missing `user` field in a successful response means the backend
       // returned data:null — this is the same semantic as a 404: the Supabase
       // session exists but no backend profile row has been created yet.
@@ -207,6 +242,10 @@ export function useAppHydration({
         quota:   payload.quota   as User['quota'],
       };
 
+      // WP-AV-02E — Log: immediately after mapping the response into the
+      // application user model.
+      console.log("[Hydration] mapped user", user);
+
       // AS-01: Guard state writes and cache writes against late-arriving abort.
       // apiClient will throw AbortError if the signal fires during the await,
       // so execution normally won't reach here after abort. However, a signal
@@ -217,6 +256,13 @@ export function useAppHydration({
       if (signal?.aborted) return null;
 
       setUser(user);
+
+      // WP-AV-02E — Log: immediately after updating AppContext application
+      // state. `user` is the exact value passed to setUser() above — logged
+      // here (rather than after a subsequent render) because React state
+      // updates are asynchronous and there is no synchronous "state.user"
+      // to read immediately after the setter call.
+      console.log("[AppContext] state", user);
 
       // DEDUP FIX — Seed the React Query cache with the payload we just fetched.
       //
@@ -308,6 +354,25 @@ export function useAppHydration({
         // timeline and any registered external adapters (Sentry, Datadog) capture
         // the failure with enough context to diagnose the cause in production.
         // The event is fire-and-forget — it never affects error propagation.
+
+        // RATE-LIMIT GUARD (429):
+        //   A 429 on /users/me is a transient signal — the server is temporarily
+        //   overwhelmed. Calling setIsError(true) here would transition the app
+        //   into error state, clear isHydrated, and allow useUser's useQuery to
+        //   re-fire the moment isHydrated flips back — producing a tight 429 storm.
+        //
+        //   We do NOT return null here: null means "no profile" (new OAuth user),
+        //   which makes hydrate() call setIsHydrated(true) with user===null, causing
+        //   AuthCallbackPage to redirect to /auth/login — breaking the login flow.
+        //
+        //   Instead throw RateLimitHydrationError. AppContext catches it in
+        //   hydrate()'s catch block, skips setIsError AND setIsHydrated, and lets
+        //   the next TOKEN_REFRESHED event retry the full cycle cleanly.
+        const isRateLimit = isApiClientError(err) && err.category === 'rate_limit';
+        if (isRateLimit) {
+          throw new RateLimitHydrationError();
+        }
+
         try {
           const category = isApiClientError(err) ? err.category : 'unknown';
           const status   = isApiClientError(err) ? err.status   : undefined;

@@ -49,6 +49,10 @@ export interface FlagUserContext {
   resumeUploaded?:     boolean;
   /** Tier / plan. Use 'free' until billing tiers are implemented. */
   tier?:               string;
+  /** Internal Anthropic/HireRise team member. Gates ai_experimental_mode. */
+  isInternal?:         boolean;
+  /** Engineering team member. Gates ai_research_mode. */
+  isEngineeringTeam?:  boolean;
 }
 
 /** All supported feature flags and their value types. */
@@ -64,6 +68,25 @@ export interface FeatureFlags {
   // ── Observability ─────────────────────────────────────────────────────────
   enable_performance_tracking: boolean;
   enable_error_reporting:      boolean;
+  // ── XAI / AI Augmentation (R2 — XAI-1 Sprint 0) ──────────────────────────
+  /**
+   * Master switch for all XAI augmentation capabilities.
+   *
+   * Setting this false instantly disables all AI narrative rendering,
+   * explanation generation, and capability adapter activity. This is the
+   * primary kill-switch for dark launch and controlled rollout (Sprint 2).
+   *
+   * Default: false (fail-closed).
+   * Owner:   XAI Programme Lead
+   * Change authority: Engineering Director + XAI Programme Lead
+   *
+   * Consumers: WP-7 (Dashboard & Reporting), WP-13, useAIExplanation hook,
+   * and all future XAI capability adapters (WP-2/WP-3/WP-4).
+   *
+   * GOVERNANCE: No consumer may reimplement this check inline. All XAI
+   * capability gating must read this flag via evaluateFlag().
+   */
+  ai_augmentation_enabled: boolean;
 }
 
 export type FlagKey = keyof FeatureFlags;
@@ -101,6 +124,8 @@ const FLAG_DEFAULTS: FeatureFlags = {
   skills_priority_widget:      true,
   enable_performance_tracking: true,
   enable_error_reporting:      true,
+  // XAI / AI Augmentation — fail-closed, default disabled (R2 — XAI-1 Sprint 0)
+  ai_augmentation_enabled:     false,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

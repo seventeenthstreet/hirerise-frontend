@@ -17,6 +17,7 @@
  */
 
 import type { User } from '@/hooks/useUser';
+import { ROUTES } from '@/routes/routes.constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RESULT TYPE
@@ -30,6 +31,23 @@ function allow(): GuardAllowed                     { return { allowed: true }; }
 function block(redirectTo: string): GuardBlocked   { return { allowed: false, redirectTo }; }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GUARD 0 — isAdminUser
+// Single canonical admin-role check, shared by AdminGuard (route protection)
+// and AppEntryPage (post-login routing). Mirrors the backend's accepted admin
+// roles in core/src/middleware/requireAdmin.middleware.js (hasAdminClaim /
+// isMasterAdmin). WP-ADMIN-02B Phase 2: previously duplicated as a private
+// inline ADMIN_ROLES array inside AdminGuard.tsx — consolidated here so admin
+// detection can never drift between the two call sites.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ADMIN_ROLES = ['MASTER_ADMIN', 'admin', 'super_admin'] as const;
+
+/** True if the user holds one of the backend's recognized admin roles. */
+export function isAdminUser(user: User | null): boolean {
+  return !!user?.role && (ADMIN_ROLES as readonly string[]).includes(user.role);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GUARD 1 — requireDirection
 // User must have chosen a direction (user_type) before accessing guarded pages.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,7 +57,17 @@ function block(redirectTo: string): GuardBlocked   { return { allowed: false, re
  * Redirects to /direction so they can choose student | professional | market.
  */
 export function requireDirection(user: User | null): GuardResult {
+  // WP-AV-02E — Log: beginning of guard.
+  console.log("[Guard] requireDirection", {
+    user_type: user?.user_type,
+    onboarding_completed: user?.onboarding_completed,
+    professional_onboarding_complete: user?.professional_onboarding_complete,
+    student_onboarding_complete: user?.student_onboarding_complete,
+  });
+
   if (!user?.user_type) {
+    // WP-AV-02E — Log: immediately before redirecting.
+    console.log("[Guard Redirect]", '/direction');
     return block('/direction');
   }
   return allow();
@@ -56,7 +84,7 @@ export function requireDirection(user: User | null): GuardResult {
  * Logic:
  *  - No direction set               → /direction (safety net; direction guard fires first)
  *  - student  + not complete        → /education/onboarding (new student onboarding flow)
- *  - professional + not complete    → /onboarding (legacy professional flow)
+ *  - professional + not complete    → /onboarding/profile (Entry Experience — WP-PRO-09)
  *  - any + onboarding_completed     → allowed (generic completion flag; canonical on backend)
  *
  * FIX (2026-05-19):
@@ -65,9 +93,30 @@ export function requireDirection(user: User | null): GuardResult {
  *   returns 0 steps for student accounts → rendered "0 of 0 steps" / "No onboarding
  *   steps found." Students must route to /education/onboarding which uses the new
  *   student-onboarding module (Supabase-backed, registry-driven, EducationStep-first).
+ *
+ * FIX (WP-PRO-09I):
+ *   Professionals were previously routed to /onboarding (ROUTES.ONBOARDING_ROOT),
+ *   which mounts WelcomePage — the legacy, self-contained "Set up your career
+ *   profile" / Consent / "Generate my report" flow. WelcomePage never forwards
+ *   users on to /onboarding/profile, so the entire Entry Experience / Guided
+ *   Builder / Resume Upload track built in WP-PRO-09A-H was unreachable from
+ *   normal navigation even though its routes were correctly registered. This
+ *   guard now sends incomplete professionals to ROUTES.ONBOARDING_PROFILE
+ *   ('/onboarding/profile') instead, where OnboardingGuard (requiredStep
+ *   "welcome") + EntryExperience take over.
  */
 export function requireOnboardingComplete(user: User | null): GuardResult {
+  // WP-AV-02E — Log: beginning of guard.
+  console.log("[Guard] requireOnboardingComplete", {
+    user_type: user?.user_type,
+    onboarding_completed: user?.onboarding_completed,
+    professional_onboarding_complete: user?.professional_onboarding_complete,
+    student_onboarding_complete: user?.student_onboarding_complete,
+  });
+
   if (!user?.user_type) {
+    // WP-AV-02E — Log: immediately before redirecting.
+    console.log("[Guard Redirect]", '/direction');
     return block('/direction');
   }
 
@@ -78,6 +127,8 @@ export function requireOnboardingComplete(user: User | null): GuardResult {
 
   if (user.user_type === 'student' && !user.student_onboarding_complete) {
     // Route students to the new student-onboarding module, NOT the legacy /onboarding
+    // WP-AV-02E — Log: immediately before redirecting.
+    console.log("[Guard Redirect]", '/education/onboarding');
     return block('/education/onboarding');
   }
 
@@ -85,7 +136,9 @@ export function requireOnboardingComplete(user: User | null): GuardResult {
     user.user_type === 'professional' &&
     !user.professional_onboarding_complete
   ) {
-    return block('/onboarding');
+    // WP-AV-02E — Log: immediately before redirecting.
+    console.log("[Guard Redirect]", ROUTES.ONBOARDING_PROFILE);
+    return block(ROUTES.ONBOARDING_PROFILE);
   }
 
   // market users don't have a dedicated onboarding flow yet

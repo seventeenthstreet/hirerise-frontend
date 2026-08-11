@@ -17,7 +17,9 @@
  *  2. personal-details — Name, current role, years of experience
  *  3. career-intent    — Target role, growth timeline, priorities
  *  4. skills           — Current skills (multi-select)
- *  5. complete         — Terminal submit (triggers career report generation)
+ *  5. complete         — Terminal submit (completes onboarding, redirects
+ *                         to Dashboard/resume; does not trigger AI report
+ *                         generation — see WP-PRO-03)
  *
  * ARCHITECTURE:
  *  - Uses useOnboarding() hook (same as /onboarding) for API + cache

@@ -1,5 +1,3 @@
-
-
 /**
  * @file components/student-onboarding/shell/StudentOnboardingShell.tsx
  *
@@ -34,6 +32,12 @@ interface StudentOnboardingShellProps {
   flow: UseStudentOnboardingFlowReturn;
   resume: UseResumeOnboardingReturn;
   children: ReactNode;
+  /** Called when the user clicks "Change direction". Omit to hide the link. */
+  onChangeDirection?: () => void;
+  /** True while the direction-reset mutation is in flight. */
+  isResettingDirection?: boolean;
+  /** Called when the user clicks "Log out". Omit to hide the link. */
+  onLogout?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,6 +168,53 @@ function ProgressSection({
   );
 }
 
+function EscapeHatchFooter({
+  onChangeDirection,
+  isResettingDirection,
+  onLogout,
+}: {
+  onChangeDirection?: () => void;
+  isResettingDirection?: boolean;
+  onLogout?: () => void;
+}) {
+  if (!onChangeDirection && !onLogout) return null;
+
+  return (
+    <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border pt-6 text-xs text-muted-foreground">
+      {onChangeDirection && (
+        <span className="inline-flex items-center gap-1.5">
+          <span>Picked student by mistake?</span>
+          <button
+            type="button"
+            onClick={onChangeDirection}
+            disabled={isResettingDirection}
+            className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isResettingDirection ? (
+              <>
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true" />
+                Resetting…
+              </>
+            ) : (
+              'Change direction'
+            )}
+          </button>
+        </span>
+      )}
+      {onChangeDirection && onLogout && <span aria-hidden="true">·</span>}
+      {onLogout && (
+        <button
+          type="button"
+          onClick={onLogout}
+          className="font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Log out
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ShellLoadingState({ label }: { label?: string }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -188,6 +239,9 @@ export function StudentOnboardingShell({
   flow,
   resume,
   children,
+  onChangeDirection,
+  isResettingDirection,
+  onLogout,
 }: StudentOnboardingShellProps) {
 
   // ── ① Version mismatch guard (HIGHEST PRIORITY) ───────────────────────────
@@ -254,6 +308,12 @@ export function StudentOnboardingShell({
       )}
 
       {children}
+
+      <EscapeHatchFooter
+        onChangeDirection={onChangeDirection}
+        isResettingDirection={isResettingDirection}
+        onLogout={onLogout}
+      />
     </div>
   );
 }

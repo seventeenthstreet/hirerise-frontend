@@ -158,16 +158,16 @@ export function OnboardingSteps({
                     <button
                       onClick={() => handleStepAction(step)}
                       disabled={isSubmitting}
-                      aria-label={`${isThisLastStep ? 'Generate report for' : 'Continue'} step: ${step.stepId}`}
+                      aria-label={`${isThisLastStep ? 'Complete' : 'Continue'} step: ${step.stepId}`}
                       className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSubmitting ? (
                         <>
                           <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
-                          {isThisLastStep ? 'Generating your report…' : 'Saving…'}
+                          {isThisLastStep ? 'Finishing…' : 'Saving…'}
                         </>
                       ) : (
-                        isThisLastStep ? 'Generate my report' : 'Continue'
+                        isThisLastStep ? 'Finish' : 'Continue'
                       )}
                     </button>
                   ) : (

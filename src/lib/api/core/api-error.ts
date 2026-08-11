@@ -61,6 +61,34 @@ export const BackendErrorCode = {
   INTERNAL_ERROR:                 'INTERNAL_ERROR',
   EXTERNAL_SERVICE_ERROR:         'EXTERNAL_SERVICE_ERROR',
   RATE_LIMIT_SERVICE_UNAVAILABLE: 'RATE_LIMIT_SERVICE_UNAVAILABLE',
+  // PERMISSION ADMINISTRATION (WP-ADMIN-04F-09) — additive only. Mirrors
+  // the `.code` strings the certified domain layers actually throw
+  // (src/domain/permission/**/*.errors.js) and the manual 'PERMISSION_NOT_FOUND'
+  // 404 sent by permissionRegistry.controller.js's notFound() helper.
+  // Without these entries every Permission Administration error would
+  // fall through mapErrorCodeToCategory's default and be miscategorized
+  // as 'system' regardless of its real HTTP status (see that function's
+  // `if (category === 'system' && !code)` guard — it only re-derives
+  // from status when `code` is ABSENT, and every one of these errors
+  // does carry a `code`).
+  PERMISSION_NOT_FOUND:                        'PERMISSION_NOT_FOUND',
+  PERMISSION_REGISTRY_VALIDATION_ERROR:        'PERMISSION_REGISTRY_VALIDATION_ERROR',
+  PERMISSION_REGISTRY_DUPLICATE_IDENTITY:      'PERMISSION_REGISTRY_DUPLICATE_IDENTITY',
+  PERMISSION_REGISTRY_MALFORMED_ENTRY:         'PERMISSION_REGISTRY_MALFORMED_ENTRY',
+  ASSIGNMENT_INVALID_REQUEST:                  'ASSIGNMENT_INVALID_REQUEST',
+  ASSIGNMENT_PERMISSION_NOT_ASSIGNABLE:        'ASSIGNMENT_PERMISSION_NOT_ASSIGNABLE',
+  ASSIGNMENT_DUPLICATE:                        'ASSIGNMENT_DUPLICATE',
+  ASSIGNMENT_NOT_FOUND:                        'ASSIGNMENT_NOT_FOUND',
+  EVALUATION_PERMISSION_NOT_FOUND:             'EVALUATION_PERMISSION_NOT_FOUND',
+  EVALUATION_PERMISSION_NOT_EVALUABLE:         'EVALUATION_PERMISSION_NOT_EVALUABLE',
+  EVALUATION_CONTEXT_ERROR:                    'EVALUATION_CONTEXT_ERROR',
+  EVALUATION_UNSUPPORTED_REQUEST:              'EVALUATION_UNSUPPORTED_REQUEST',
+  PERMISSION_INVALID_RESOURCE:                 'PERMISSION_INVALID_RESOURCE',
+  PERMISSION_INVALID_ACTION:                   'PERMISSION_INVALID_ACTION',
+  PERMISSION_INVALID_CATEGORY:                 'PERMISSION_INVALID_CATEGORY',
+  PERMISSION_INVALID_STATUS:                   'PERMISSION_INVALID_STATUS',
+  PERMISSION_INVALID_AUTHORIZATION_CONTEXT:    'PERMISSION_INVALID_AUTHORIZATION_CONTEXT',
+  PERMISSION_INVALID_PERMISSION:               'PERMISSION_INVALID_PERMISSION',
 } as const;
 
 export type BackendErrorCode = (typeof BackendErrorCode)[keyof typeof BackendErrorCode];
@@ -92,6 +120,27 @@ export const ERROR_CODE_TO_HTTP_STATUS: Record<BackendErrorCode, number> = {
   [BackendErrorCode.INTERNAL_ERROR]:                  500,
   [BackendErrorCode.EXTERNAL_SERVICE_ERROR]:          502,
   [BackendErrorCode.RATE_LIMIT_SERVICE_UNAVAILABLE]:  503,
+  // PERMISSION ADMINISTRATION (WP-ADMIN-04F-09) — statuses mirror
+  // permissionAdmin.errorMap.js's ERROR_STATUS_BY_NAME exactly (keyed
+  // there by error.name; keyed here by the same error's wire .code).
+  [BackendErrorCode.PERMISSION_NOT_FOUND]:                     404,
+  [BackendErrorCode.PERMISSION_REGISTRY_VALIDATION_ERROR]:     400,
+  [BackendErrorCode.PERMISSION_REGISTRY_DUPLICATE_IDENTITY]:   409,
+  [BackendErrorCode.PERMISSION_REGISTRY_MALFORMED_ENTRY]:      422,
+  [BackendErrorCode.ASSIGNMENT_INVALID_REQUEST]:               400,
+  [BackendErrorCode.ASSIGNMENT_PERMISSION_NOT_ASSIGNABLE]:     422,
+  [BackendErrorCode.ASSIGNMENT_DUPLICATE]:                     409,
+  [BackendErrorCode.ASSIGNMENT_NOT_FOUND]:                     404,
+  [BackendErrorCode.EVALUATION_PERMISSION_NOT_FOUND]:          404,
+  [BackendErrorCode.EVALUATION_PERMISSION_NOT_EVALUABLE]:      422,
+  [BackendErrorCode.EVALUATION_CONTEXT_ERROR]:                 400,
+  [BackendErrorCode.EVALUATION_UNSUPPORTED_REQUEST]:           400,
+  [BackendErrorCode.PERMISSION_INVALID_RESOURCE]:              400,
+  [BackendErrorCode.PERMISSION_INVALID_ACTION]:                400,
+  [BackendErrorCode.PERMISSION_INVALID_CATEGORY]:              400,
+  [BackendErrorCode.PERMISSION_INVALID_STATUS]:                400,
+  [BackendErrorCode.PERMISSION_INVALID_AUTHORIZATION_CONTEXT]: 400,
+  [BackendErrorCode.PERMISSION_INVALID_PERMISSION]:            400,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,6 +191,31 @@ export function mapErrorCodeToCategory(code: string | undefined): ErrorCategory 
     case BackendErrorCode.PROCESSING_FAILED:
     case BackendErrorCode.RATE_LIMIT_SERVICE_UNAVAILABLE:
       return 'server';
+
+    // PERMISSION ADMINISTRATION (WP-ADMIN-04F-09)
+    case BackendErrorCode.PERMISSION_NOT_FOUND:
+    case BackendErrorCode.ASSIGNMENT_NOT_FOUND:
+    case BackendErrorCode.EVALUATION_PERMISSION_NOT_FOUND:
+      return 'not_found';
+
+    case BackendErrorCode.PERMISSION_REGISTRY_DUPLICATE_IDENTITY:
+    case BackendErrorCode.ASSIGNMENT_DUPLICATE:
+      return 'conflict';
+
+    case BackendErrorCode.PERMISSION_REGISTRY_VALIDATION_ERROR:
+    case BackendErrorCode.PERMISSION_REGISTRY_MALFORMED_ENTRY:
+    case BackendErrorCode.ASSIGNMENT_INVALID_REQUEST:
+    case BackendErrorCode.ASSIGNMENT_PERMISSION_NOT_ASSIGNABLE:
+    case BackendErrorCode.EVALUATION_PERMISSION_NOT_EVALUABLE:
+    case BackendErrorCode.EVALUATION_CONTEXT_ERROR:
+    case BackendErrorCode.EVALUATION_UNSUPPORTED_REQUEST:
+    case BackendErrorCode.PERMISSION_INVALID_RESOURCE:
+    case BackendErrorCode.PERMISSION_INVALID_ACTION:
+    case BackendErrorCode.PERMISSION_INVALID_CATEGORY:
+    case BackendErrorCode.PERMISSION_INVALID_STATUS:
+    case BackendErrorCode.PERMISSION_INVALID_AUTHORIZATION_CONTEXT:
+    case BackendErrorCode.PERMISSION_INVALID_PERMISSION:
+      return 'validation';
 
     default:
       return 'system';

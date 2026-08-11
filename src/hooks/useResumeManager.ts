@@ -184,7 +184,14 @@ export function useResumeManager(
       // listResumes() resolves — without this check setResumes() would fire on
       // an unmounted component.
       if (!mountedRef.current) return;
-      setResumes(data);
+      // HARDENING: apiRequest() can legitimately resolve `undefined` for a
+      // "no-content success" response (e.g. a 204/empty body, or the
+      // documented dev-proxy 304-replay-as-`{}` case in api-parser.ts) since
+      // listResumes() does not pass { requireData: true }. Without this
+      // guard, setResumes(undefined) crashed the `resumes.find(...)` derivation
+      // below on the very next render. Additive only — a genuine array of
+      // resumes still passes straight through unchanged.
+      setResumes(Array.isArray(data) ? data : []);
     } catch (err) {
       if (!mountedRef.current) return;
       const e = err instanceof Error ? err : new Error(String(err));

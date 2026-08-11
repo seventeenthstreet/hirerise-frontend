@@ -170,9 +170,9 @@ export function useAIExplanation({
  */
 function _isAugmentationEnabled(): boolean {
   try {
-    // 'ai_augmentation_enabled' will be added to FeatureFlags in featureFlags.ts
-    // as part of Phase 4B-1 rollout. Until then, returns false safely.
-    return (evaluateFlag as (flag: string) => boolean)('ai_augmentation_enabled') ?? false;
+    // R2 (XAI-1 Sprint 0): ai_augmentation_enabled is now registered in
+    // FeatureFlags — typed call, no cast required.
+    return evaluateFlag('ai_augmentation_enabled') ?? false;
   } catch {
     return false;  // fail closed — no AI augmentation on any flag error
   }

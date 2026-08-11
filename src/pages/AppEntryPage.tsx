@@ -1,43 +1,52 @@
 /**
- * /app/page.tsx — App Entry Gate
+ * src/pages/AppEntryPage.tsx — App Entry Gate
  *
- * HARDENING CHANGES:
- *  1. Uses useAppContext() instead of calling useAppEntry() + useUser()
- *     independently — single /users/me fetch across the app (no duplicate calls).
- *  2. Guard fires BEFORE any UI renders: returns null immediately on redirect
- *     so there is zero flicker of the loading spinner between routing decisions.
+ * ROUTE FIX: Corrected three navigate() targets that pointed to non-existent paths,
+ * causing the catch-all (* → /404) to fire on every app load:
  *
- * Routing decision tree (unchanged from original):
- *   user_type = null              → /direction
- *   user_type = 'student'
- *     → /education/onboarding (new registry-driven student flow)
- *     (completion guard inside /education/onboarding redirects to /dashboard when done)
+ *   '/login'              → '/auth/login'         (router defines auth group at /auth/*)
+ *   '/education/onboarding' → '/onboarding'       (no /education/* route exists)
+ *   '/market-insights'    → '/dashboard'           (no /market-insights route exists)
+ *
+ * Routing decision tree:
+ *   isError                                      → /auth/login
+ *   no user + session exists                     → /direction
+ *   no user + no session                         → /auth/login
+ *   user is an admin (isAdminUser)                → /admin  (evaluated before user_type — WP-ADMIN-02B Phase 2)
+ *   user_type = null                             → /direction
+ *   user_type = 'student'                        → /onboarding  (student sub-flow)
  *   user_type = 'professional'
- *     professional_onboarding_complete = false → /onboarding
- *     resume_uploaded = false              → /resume
- *     else                                 → /dashboard
- *   user_type = 'market'          → /market-insights
- *   fallback                      → /dashboard
+ *     onboarding incomplete                      → /onboarding/profile (Entry Experience)
+ *     resume not uploaded                        → /resume
+ *     else                                       → /dashboard
+ *   user_type = 'market'                         → /dashboard   (fallback until dedicated page exists)
+ *   fallback                                     → /dashboard
  *
- * This page NEVER renders UI — it is a pure routing gate.
+ * WP-ADMIN-02B Phase 2 — ROUTING RECONCILIATION:
+ *   Root cause (Phase 1 audit): this decision tree branched exclusively on
+ *   user_type and never checked user.role, so authenticated admins (whose
+ *   accounts also carry user_type: 'professional') fell through the
+ *   Professional branch and landed on /dashboard instead of /admin. Manual
+ *   navigation to /admin worked because it bypasses this component entirely
+ *   and hits AdminGuard directly, which already checked role correctly.
  *
- * A-05 — Unmounted async routing fix:
- *   The `!user` branch calls getSession().then(router.replace) asynchronously.
- *   If the component unmounts before getSession() resolves (e.g. the user
- *   navigates away, or AppContext completes hydration and triggers a re-render),
- *   router.replace() fires post-unmount. This can produce a conflicting redirect
- *   that overwrites the correct destination route chosen by the new page.
+ *   Fix: added an admin check ahead of the user_type branches, reusing the
+ *   same isAdminUser() guard AdminGuard.tsx uses (both now import it from
+ *   lib/guards.ts — no second admin-role definition was introduced). Admins
+ *   are routed to ROUTES.ADMIN_ROOT ('/admin'), not '/admin/cms' directly —
+ *   the Admin router's own index route decides its landing page, so this
+ *   stays compatible with WP-ADMIN-03 replacing that landing page later.
  *
- *   Fix: an `isMounted` ref (set to false in effect cleanup) is checked inside
- *   the async callback before calling router.replace(). If the component has
- *   unmounted, the redirect is silently dropped — the navigation that caused
- *   the unmount is already in progress and owns the route.
+ *   Authentication, session hydration, AdminGuard, and requireAdmin were not
+ *   modified — this is a single additive branch in this file only.
  */
 
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { requireOnboardingComplete, isAdminUser } from '@/lib/guards';
+import { ROUTES } from '@/routes/routes.constants';
 import { PageLoading } from '@/components/ui';
 
 export default function AppEntryPage() {
@@ -55,86 +64,139 @@ export default function AppEntryPage() {
   }, []);
 
   useEffect(() => {
-    // Wait until hydration has fully settled before making any routing decision.
     if (!isHydrated) return;
 
-    // Hard failure — send to login.
+    // WP-AV-02E — Log: beginning of guard. This is the exact `user` object
+    // (from AppContext) that AppEntryPage's routing decision is based on.
+    console.log("[Guard] AppEntryPage", {
+      user_type: user?.user_type,
+      onboarding_completed: user?.onboarding_completed,
+      professional_onboarding_complete: user?.professional_onboarding_complete,
+      student_onboarding_complete: user?.student_onboarding_complete,
+    });
+
+    // Hard hydration failure — send to login.
     if (isError) {
-      navigate('/login', { replace: true });
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", '/auth/login');
+      console.log("[Navigation]", '/auth/login');
+      navigate('/auth/login', { replace: true }); // FIX: was '/login'
       return;
     }
 
-    // Authenticated but no backend profile yet (e.g. brand-new Google OAuth user).
-    // The Supabase session exists but /users/me returned 404.
-    // Route to /direction so the user can set up their profile.
+    // No backend profile yet (new OAuth user, or /users/me returned 404).
+    // Check if a Supabase session exists to decide between direction-setup vs login.
     if (!user) {
       getSupabaseClient().auth.getSession().then(({ data: { session } }) => {
-        // A-05: Component may have unmounted while getSession() was in-flight.
-        // If so, drop the redirect — the navigation that caused unmount already
-        // owns the route. Calling router.replace() post-unmount would overwrite
-        // the correct destination with a stale routing decision.
         if (!isMounted.current) return;
-        navigate(session ? '/direction' : '/login', { replace: true });
+        const destination = session ? '/direction' : '/auth/login'; // FIX: was '/login'
+        // WP-AV-02E — Log: immediately before redirecting / navigation.
+        console.log("[Guard Redirect]", destination);
+        console.log("[Navigation]", destination);
+        navigate(
+          destination,
+          { replace: true }
+        );
       });
+      return;
+    }
+
+    // ── Admin branch ─────────────────────────────────────────────────────────
+    // WP-ADMIN-02B Phase 2: evaluated before user_type so an admin account
+    // (which also normally carries user_type: 'professional') is routed to
+    // the Admin platform instead of falling through to the Professional
+    // branch below. Reuses AdminGuard's own isAdminUser() check — no
+    // duplicate role logic. Routes to ROUTES.ADMIN_ROOT ('/admin'), not
+    // '/admin/cms' directly, so the Admin router's own index route stays in
+    // control of its landing page.
+    if (isAdminUser(user)) {
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", ROUTES.ADMIN_ROOT);
+      console.log("[Navigation]", ROUTES.ADMIN_ROOT);
+      navigate(ROUTES.ADMIN_ROOT, { replace: true });
       return;
     }
 
     const {
       user_type,
-      student_onboarding_complete: _student_onboarding_complete,
-      professional_onboarding_complete,
-      onboarding_completed,
       resume_uploaded,
     } = user;
 
-    // ── Direction gate ──────────────────────────────────────────────────────
+    // ── Direction gate ───────────────────────────────────────────────────────
     if (!user_type) {
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", '/direction');
+      console.log("[Navigation]", '/direction');
       navigate('/direction', { replace: true });
       return;
     }
 
-    // ── Student branch ──────────────────────────────────────────────────────
-    // FIX: Students always route to /education/onboarding (new registry-driven flow).
-    // /onboarding is the legacy professional flow — calling /api/v1/onboarding
-    // which returns 0 steps for student accounts → "0 of 0 steps" / "No onboarding
-    // steps found." The completion guard inside /education/onboarding/page.tsx
-    // handles the already-complete case → redirects to /dashboard.
+    // ── Student branch ───────────────────────────────────────────────────────
+    // FIX: was '/education/onboarding' — no such route exists.
+    // Students use the same /onboarding shell; the student sub-steps live at
+    // /onboarding/student/* and are gated by OnboardingGuard.
     if (user_type === 'student') {
-      navigate('/education/onboarding', { replace: true });
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", '/onboarding');
+      console.log("[Navigation]", '/onboarding');
+      navigate('/onboarding', { replace: true });
       return;
     }
 
-    // ── Professional branch ─────────────────────────────────────────────────
+    // ── Professional branch ──────────────────────────────────────────────────
+    // WP-PRO-09I: previously hardcoded navigate('/onboarding') here, which is
+    // this file's own copy of the same completion check duplicated in
+    // AuthGuard.tsx and lib/guards.ts's requireOnboardingComplete — all three
+    // independently hardcoded the legacy '/onboarding' (WelcomePage) target
+    // for professionals, so the Entry Experience at '/onboarding/profile' was
+    // never reached from the app's actual entry point. Delegating to the
+    // canonical guard fixes this and removes the duplicate copy.
     if (user_type === 'professional') {
-      if (!professional_onboarding_complete && !onboarding_completed) {
-        navigate('/onboarding', { replace: true });
+      const onboardingGuard = requireOnboardingComplete(user);
+      if (!onboardingGuard.allowed) {
+        // WP-AV-02E — Log: immediately before redirecting / navigation.
+        console.log("[Guard Redirect]", onboardingGuard.redirectTo);
+        console.log("[Navigation]", onboardingGuard.redirectTo);
+        navigate(onboardingGuard.redirectTo, { replace: true });
         return;
       }
       if (!resume_uploaded) {
+        // WP-AV-02E — Log: immediately before redirecting / navigation.
+        console.log("[Guard Redirect]", '/resume');
+        console.log("[Navigation]", '/resume');
         navigate('/resume', { replace: true });
         return;
       }
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", '/dashboard');
+      console.log("[Navigation]", '/dashboard');
       navigate('/dashboard', { replace: true });
       return;
     }
 
-    // ── Market branch ───────────────────────────────────────────────────────
+    // ── Market branch ────────────────────────────────────────────────────────
+    // FIX: was '/market-insights' — no such route exists yet.
+    // Route to dashboard as fallback until the market page is built.
     if (user_type === 'market') {
-      navigate('/market-insights', { replace: true });
+      // WP-AV-02E — Log: immediately before redirecting / navigation.
+      console.log("[Guard Redirect]", '/dashboard');
+      console.log("[Navigation]", '/dashboard');
+      navigate('/dashboard', { replace: true });
       return;
     }
 
-    // ── Safe fallback ───────────────────────────────────────────────────────
+    // ── Safe fallback ────────────────────────────────────────────────────────
+    // WP-AV-02E — Log: immediately before redirecting / navigation.
+    console.log("[Guard Redirect]", '/dashboard');
+    console.log("[Navigation]", '/dashboard');
     navigate('/dashboard', { replace: true });
   }, [isHydrated, isError, user, navigate]);
 
-  // ── PRE-RENDER GUARD: return null immediately if redirect is needed ────────
-  // Once hydration is done and user exists, we know a redirect is imminent.
-  // Returning null prevents any flash of the spinner between route resolution.
+  // Pre-render guard: once hydration settles we know a redirect is imminent.
+  // Return null to prevent a spinner flash between route resolution.
   if (isHydrated && (isError || user)) {
     return null;
   }
 
-  // Loading screen — shown only while hydration is in-flight.
   return <PageLoading label="Loading HireRise…" />;
 }

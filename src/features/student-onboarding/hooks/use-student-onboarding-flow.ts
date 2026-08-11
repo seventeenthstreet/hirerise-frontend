@@ -52,7 +52,7 @@ import type {
   StudentOnboardingError,
 } from '@/modules/student-onboarding';
 
-import { computePollingInterval } from '../lib/polling-guard';
+import { computePollingInterval, RATE_LIMIT_BACKOFF_MS } from '../lib/polling-guard';
 import {
   isValidOnboardingStep,
 } from '../lib/onboarding-hardening.types';
@@ -186,6 +186,14 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
   // Tracks when polling started so we can detect a stuck processing step.
   const pollingStartRef = useRef<number | null>(null);
 
+  // ── Rate-limit backoff ref ────────────────────────────────────────────────
+  // When the session or user endpoint returns 429, we suppress polling for
+  // RATE_LIMIT_BACKOFF_MS to avoid hammering the server. This is a boolean
+  // state value tracked as a ref so changes do NOT trigger re-renders —
+  // computePollingInterval reads it on each effect evaluation instead.
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── Session ───────────────────────────────────────────────────────────────
   const {
     session,
@@ -301,10 +309,23 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
     // If version is incompatible, suppress polling by faking a non-processing step.
     versionCompatibility.isVersionCompatible ? currentStepId : 'version_blocked',
     session?.isComplete ?? false,
+    isRateLimited,
   );
 
   useEffect(() => {
     if (refetchInterval === false) {
+      if (pollingMode === 'rate_limited') {
+        // 429 received — polling suppressed for RATE_LIMIT_BACKOFF_MS.
+        // Log once and schedule clearance; do NOT start a new interval.
+        logOnboardingEvent({
+          event: 'polling_disabled',
+          severity: 'warn',
+          timestamp: new Date().toISOString(),
+          onboardingStep: currentStepId,
+          metadata: { reason: 'rate_limited', backoffMs: RATE_LIMIT_BACKOFF_MS },
+        });
+        return;
+      }
       if (pollingMode === 'inactive' && currentStepId === 'processing') {
         // Polling was intentionally disabled — emit diagnostic
         logOnboardingEvent({
@@ -349,6 +370,38 @@ export function useStudentOnboardingFlow(): UseStudentOnboardingFlowReturn {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchInterval, pollingMode]);
+
+  // ── Rate-limit backoff ─────────────────────────────────────────────────────
+  // When the session query fails with a server error that maps to a 429 (or the
+  // AppContext user endpoint returns 429), set isRateLimited=true for
+  // RATE_LIMIT_BACKOFF_MS. computePollingInterval returns mode:'rate_limited'
+  // while this flag is set, which causes the polling effect above to skip
+  // starting a new setInterval — preventing the 429 storm seen in production.
+  //
+  // sessionError is a StudentOnboardingError (Supabase-sourced) and will never
+  // carry category==='rate_limit' directly, but a 'server' error during the
+  // processing step is the same operational signal: back off and wait.
+  // We therefore trigger on any session error while in the processing step.
+  useEffect(() => {
+    if (!isSessionError || currentStepId !== 'processing') {
+      return;
+    }
+    // Arm backoff
+    setIsRateLimited(true);
+    if (rateLimitTimerRef.current) clearTimeout(rateLimitTimerRef.current);
+    rateLimitTimerRef.current = setTimeout(() => {
+      setIsRateLimited(false);
+      rateLimitTimerRef.current = null;
+    }, RATE_LIMIT_BACKOFF_MS);
+
+    return () => {
+      if (rateLimitTimerRef.current) {
+        clearTimeout(rateLimitTimerRef.current);
+        rateLimitTimerRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSessionError, currentStepId]);
 
   // ── Polling stuck detector ─────────────────────────────────────────────────
   // If the processing step stays active beyond POLLING_STUCK_THRESHOLD_MS

@@ -131,7 +131,9 @@ import { evaluateFlag } from './featureFlags';
  */
 export function isAIAugmentationEnabled(): boolean {
   try {
-    return (evaluateFlag as (flag: string) => boolean)('ai_augmentation_enabled') ?? false;
+    // R2 (XAI-1 Sprint 0): ai_augmentation_enabled is now registered in
+    // FeatureFlags — typed call, no cast required.
+    return evaluateFlag('ai_augmentation_enabled') ?? false;
   } catch {
     return false;
   }
@@ -145,6 +147,8 @@ export function isAIAugmentationEnabled(): boolean {
  */
 export function isExperimentalAIMode(): boolean {
   try {
+    // ai_experimental_mode is not yet in FeatureFlags — retained cast
+    // until Phase4B flags are merged into the canonical registry.
     return (evaluateFlag as (flag: string) => boolean)('ai_experimental_mode') ?? false;
   } catch {
     return false;

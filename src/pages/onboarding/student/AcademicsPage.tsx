@@ -69,6 +69,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '@/context/AppContext';
 import { PageLoading } from '@/components/ui';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useResetDirection } from '@/hooks/mutations';
 import {
   useStudentOnboardingFlow,
   useResumeOnboarding,
@@ -128,6 +130,33 @@ function StudentOnboardingContent() {
   // Resume detection — adds resume banner and stale session warning to shell
   const resume = useResumeOnboarding(flow.session);
 
+  // ── Escape hatch: change direction ────────────────────────────────────────
+  // Mirrors OnboardingContent's (professional flow) handleChangeDirection.
+  // Without this, a student who picked 'student' by mistake at /direction has
+  // no way back — AppEntryPage routes user_type='student' straight here on
+  // every login, and this page has no exit other than finishing the flow.
+  // DELETE /me/direction clears user_type + user_direction; refreshUser()
+  // pulls the cleared value into AppContext before navigating, so the
+  // /direction guard doesn't see a stale cached user_type and bounce back.
+  const resetDirectionMutation = useResetDirection();
+
+  const handleChangeDirection = useCallback(async () => {
+    try {
+      await resetDirectionMutation.mutateAsync();
+      await refreshUser();
+      navigate('/direction', { replace: true });
+    } catch {
+      // Non-blocking: user stays on the page and can retry.
+    }
+  }, [resetDirectionMutation, refreshUser, navigate]);
+
+  // ── Escape hatch: log out ─────────────────────────────────────────────────
+  // Mirrors DirectionPage's handleLogout — same sign-out call, same redirect.
+  const handleLogout = useCallback(async () => {
+    await getSupabaseClient().auth.signOut();
+    navigate('/auth/login', { replace: true });
+  }, [navigate]);
+
   // FIX: refresh the User record BEFORE navigating to /dashboard.
   //
   // WHY THIS IS NEEDED:
@@ -169,7 +198,13 @@ function StudentOnboardingContent() {
 
   return (
     // Shell: handles layout, loading, error, progress, resume banner
-    <StudentOnboardingShell flow={flow} resume={resume}>
+    <StudentOnboardingShell
+      flow={flow}
+      resume={resume}
+      onChangeDirection={handleChangeDirection}
+      isResettingDirection={resetDirectionMutation.isPending}
+      onLogout={handleLogout}
+    >
       {/*
         StepRouter: backend-driven step dispatch.
         - 'processing' → SafeProcessingStep (no deadlock)

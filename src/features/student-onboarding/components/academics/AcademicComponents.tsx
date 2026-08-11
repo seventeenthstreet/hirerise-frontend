@@ -24,6 +24,7 @@ import {
   ACADEMIC_BOARD_TYPES_LIST,
   ACADEMIC_BOARD_LABELS,
   ACADEMIC_SUBJECTS_LIST,
+  SUBJECTS_BY_YEAR,
   ACADEMIC_SUBJECT_LABELS,
   ACADEMIC_YEAR_LABELS,
 } from '@/features/student-onboarding/lib/academic.types';
@@ -144,7 +145,7 @@ export function AcademicYearCard({
 
         {pickerOpen && (
           <div className="academic-year-card__subject-picker" role="listbox" aria-label="Select a subject">
-            {ACADEMIC_SUBJECTS_LIST.filter((s) => !selectedSubjects.has(s)).map((subject) => (
+            {(SUBJECTS_BY_YEAR[yearDraft.academic_year] ?? ACADEMIC_SUBJECTS_LIST).filter((s) => !selectedSubjects.has(s)).map((subject) => (
               <button
                 key={subject}
                 role="option"
@@ -155,7 +156,7 @@ export function AcademicYearCard({
                 {ACADEMIC_SUBJECT_LABELS[subject]}
               </button>
             ))}
-            {ACADEMIC_SUBJECTS_LIST.every((s) => selectedSubjects.has(s)) && (
+            {(SUBJECTS_BY_YEAR[yearDraft.academic_year] ?? ACADEMIC_SUBJECTS_LIST).every((s) => selectedSubjects.has(s)) && (
               <p className="academic-year-card__all-added">All subjects added.</p>
             )}
           </div>

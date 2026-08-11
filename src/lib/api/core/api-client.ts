@@ -346,12 +346,36 @@ export async function apiRequest<T>(
     // Phase 3.5 — Observability: emit request start
     emitApiRequest(config.url, traceId, { method: config.method ?? 'GET' });
 
+    // BUGFIX (broken multipart uploads): this instance's default headers set
+    // 'Content-Type': 'application/json' (see axiosInstance below). When the
+    // request body is a FormData instance (file uploads — CSV import, resume
+    // upload), that default has to be cleared, not just left alone or
+    // manually overwritten:
+    //  - Leaving it: axios's transformRequest sees a JSON content type on a
+    //    FormData body and JSON.stringifies it, destroying the file data.
+    //  - Manually overwriting with 'multipart/form-data' (no boundary), as
+    //    individual call sites used to do: per the XHR spec, the browser
+    //    only auto-appends the required `boundary=...` parameter when NO
+    //    Content-Type header has already been set. A pre-set header —
+    //    correct-looking or not — is sent as-is, producing a body the
+    //    server's multipart parser rejects ("Boundary not found").
+    // The only header value that reliably works is `undefined`, which
+    // removes the default entirely and lets the browser generate the full
+    // `multipart/form-data; boundary=...` header itself at send() time.
+    // Doing this here — once, centrally — means individual FormData call
+    // sites (adminJobs.ts, resume.ts) don't each need to remember it, and
+    // can't reintroduce this bug by copy-pasting a manual Content-Type.
+    const isFormDataBody = typeof FormData !== 'undefined' && config.data instanceof FormData;
+    const headers: Record<string, string | undefined> | undefined = isFormDataBody
+      ? { ...config.headers, 'Content-Type': undefined }
+      : config.headers;
+
     response = await axiosInstance.request<unknown>({
       method:  config.method ?? 'GET',
       url:     config.url,
       data:    config.data,
       params:  config.params,
-      headers: config.headers,
+      headers,
       signal:  config.signal,
     });
   } catch (err) {

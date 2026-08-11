@@ -59,7 +59,7 @@ export type GetRoleDetailsResponse = {
  */
 export function getRoles(params?: GetRolesParams): Promise<GetRolesResponse> {
   return apiRequest<GetRolesResponse>({
-    url:    '/roles',
+    url:    '/api/v1/roles',
     method: 'GET',
     params: params as Record<string, unknown>,
   });
@@ -72,7 +72,7 @@ export function getRoles(params?: GetRolesParams): Promise<GetRolesResponse> {
  */
 export function getRoleDetails(roleId: string): Promise<GetRoleDetailsResponse> {
   return apiRequest<GetRoleDetailsResponse>({
-    url:    `/roles/${roleId}`,
+    url:    `/api/v1/roles/${roleId}`,
     method: 'GET',
   });
 }

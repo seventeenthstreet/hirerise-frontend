@@ -1,5 +1,3 @@
-
-
 /**
  * @file components/student-onboarding/steps/UnknownStepFallback.tsx
  *
@@ -63,7 +61,7 @@ export function UnknownStepFallback({ stepId, onRetry }: UnknownStepFallbackProp
   function handleRestart() {
     // Navigate to the education step entry point (first step).
     // This forces the backend to re-evaluate the session state.
-    navigate('/education/onboarding', { replace: true });
+    navigate('/onboarding/student/academics', { replace: true });
   }
 
   function handleDashboard() {

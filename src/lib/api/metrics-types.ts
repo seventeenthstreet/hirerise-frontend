@@ -213,3 +213,98 @@ export interface OverviewMetrics {
   /** resume_failure_rate (reliability denominator: upload_started) */
   resume_failure_rate: number;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WP-7 — XAI & SYSTEM HEALTH TYPES
+//
+// RULES (inherited from this file):
+//   - NO imports. This file must remain fully dependency-free.
+//   - NO runtime code. Types only.
+//
+// WP-13 COMPATIBILITY:
+//   These interfaces match the zero-value stub responses returned by the
+//   Phase 1 backend exactly. When WP-13 replaces the stubs with real service
+//   calls the response shapes are identical — no type changes required here,
+//   in hooks, in components, or in the dashboard page.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── XAI Usage ─────────────────────────────────────────────────────────────────
+
+/**
+ * XAI explanation pipeline usage and latency metrics.
+ * Endpoint: GET /api/v1/metrics/xai-usage
+ *
+ * Phase 1: all numeric fields are 0, explanation_types is {}.
+ * WP-13 will populate from the real XAI pipeline aggregation.
+ *
+ * ZERO-VALUE DETECTION:
+ *   explanation_request_count === 0 signals Phase 1 empty state.
+ *   Frontend XaiUsageSection renders a WP-13 placeholder in this case.
+ */
+export interface XaiUsageMetrics {
+  /** Total explanation requests sent to the XAI pipeline. */
+  explanation_request_count: number;
+  /** Fraction of explanation requests that succeeded (0–1). */
+  explanation_success_rate: number;
+  /** Fraction of explanation requests that failed (0–1). */
+  explanation_failure_rate: number;
+  /** Explanation pipeline latency at p50, in milliseconds. */
+  explanation_p50_ms: number;
+  /** Explanation pipeline latency at p95, in milliseconds. */
+  explanation_p95_ms: number;
+  /** Count of requests that fell back to the non-AI explanation path. */
+  fallback_explanation_count: number;
+  /** Breakdown of explanation requests by type slug. Empty object in Phase 1. */
+  explanation_types: Record<string, number>;
+}
+
+// ── XAI Tier Distribution ──────────────────────────────────────────────────────
+
+/**
+ * Tier-level distribution across all scored candidates.
+ * Endpoint: GET /api/v1/metrics/xai-tier
+ *
+ * Phase 1: all tier counts are 0, exposure rate is 0.
+ * WP-13 will populate from Firestore scorecard aggregation.
+ */
+export interface XaiTierDistributionMetrics {
+  /**
+   * Count of candidates in each XAI tier.
+   * All values are 0 in Phase 1.
+   */
+  tier_distribution: {
+    HIGH:    number;
+    MEDIUM:  number;
+    LOW:     number;
+    NO_DATA: number;
+  };
+  /**
+   * Fraction of sessions where ai_augmentation_enabled was true (0–1).
+   * 0 in Phase 1.
+   */
+  ai_augmentation_exposure_rate: number;
+}
+
+// ── System Health ─────────────────────────────────────────────────────────────
+
+/**
+ * System health snapshot returned by GET /api/v1/system/health.
+ *
+ * Phase 1: status is always 'healthy', error_rate_24h is 0.
+ * WP-13 will wire real Firestore / Claude API connectivity probes.
+ *
+ * FIELD NAMES match the backend wire response exactly.
+ * The hook (useSystemHealth) exposes this type directly to the UI.
+ */
+export interface SystemHealthResponse {
+  /** Current system status. */
+  status: 'healthy' | 'degraded' | 'down';
+  /** Deployment environment. */
+  environment: 'production' | 'staging' | 'development';
+  /** Semver or git SHA of the deployed build. Never a secret. */
+  build_version: string;
+  /** Errors per hour over the last 24 hours. 0 in Phase 1. */
+  error_rate_24h: number;
+  /** ISO-8601 UTC timestamp of this snapshot. */
+  checked_at: string;
+}

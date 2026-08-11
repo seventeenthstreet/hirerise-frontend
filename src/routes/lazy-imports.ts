@@ -51,12 +51,23 @@ export const AuthCallbackPage   = React.lazy(() => import('../pages/auth/AuthCal
 // ── Onboarding pages ─────────────────────────────────────────────────────────
 export const OnboardingWelcome      = React.lazy(() => import('../pages/onboarding/WelcomePage'));
 export const OnboardingProfile      = React.lazy(() => import('../pages/onboarding/ProfilePage'));
+export const OnboardingResumeUpload = React.lazy(() => import('../pages/onboarding/ResumeUploadPage'));
 export const OnboardingAcademics    = React.lazy(() => import('../pages/onboarding/student/AcademicsPage'));
 export const OnboardingActivities   = React.lazy(() => import('../pages/onboarding/student/ActivitiesPage'));
 export const OnboardingCognitive    = React.lazy(() => import('../pages/onboarding/student/CognitivePage'));
 export const OnboardingIntelligence = React.lazy(() => import('../pages/onboarding/student/IntelligencePage'));
 export const OnboardingComplete     = React.lazy(() => import('../pages/onboarding/CompletePage'));
+export const OnboardingProfileReview   = React.lazy(() => import('../pages/onboarding/profile/ReviewPage'));
+export const OnboardingProfileComplete = React.lazy(() => import('../pages/onboarding/profile/CompleteProfilePage'));
 export const CareerOnboardingPage   = React.lazy(() => import('../pages/onboarding/career/CareerOnboardingPage'));
+
+// ── Guided Profile Builder pages (WP-PRO-09D) ────────────────────────────────
+export const GuidedBuilderIndex          = React.lazy(() => import('../pages/onboarding/guided-builder/IndexPage'));
+export const GuidedBuilderPersonal       = React.lazy(() => import('../pages/onboarding/guided-builder/PersonalDetailsPage'));
+export const GuidedBuilderEducation      = React.lazy(() => import('../pages/onboarding/guided-builder/EducationPage'));
+export const GuidedBuilderExperience     = React.lazy(() => import('../pages/onboarding/guided-builder/ExperiencePage'));
+export const GuidedBuilderSkills         = React.lazy(() => import('../pages/onboarding/guided-builder/SkillsPage'));
+export const GuidedBuilderCareerGoals    = React.lazy(() => import('../pages/onboarding/guided-builder/CareerGoalsPage'));
 
 // ── Dashboard pages ──────────────────────────────────────────────────────────
 export const DashboardHomePage      = React.lazy(() => import('../pages/dashboard/DashboardHomePage'));
@@ -84,8 +95,42 @@ export const BillingPage            = React.lazy(() => import('../pages/dashboar
 export const AdminCmsPage           = React.lazy(() => import('../pages/admin/CmsPage'));
 export const AdminGraphPage         = React.lazy(() => import('../pages/admin/GraphPage'));
 export const AdminJobsPage          = React.lazy(() => import('../pages/admin/JobsPage'));
+export const AdminJobDetailPage     = React.lazy(() => import('../pages/admin/JobDetailPage')); // WP-ADMIN-COMP-06
 export const AdminWeightsPage       = React.lazy(() => import('../pages/admin/WeightsPage'));
 export const AdminIntelligencePage  = React.lazy(() => import('../pages/admin/IntelligencePage'));
+
+// WP-ADMIN-03 Phase 2 — Enterprise Dashboard landing page for /admin.
+export const AdminDashboardPage     = React.lazy(() => import('../pages/admin/DashboardPage'));
+
+// WP-7 page already existed on disk but was never mounted as a route
+// (orphaned). WP-ADMIN-03 Phase 2 registers it — no new page created.
+export const AdminXaiOperationsPage = React.lazy(() => import('../pages/admin/XaiOperationsDashboardPage'));
+
+// WP-ADMIN-04/04C/COMP-04 — Users is a fully live module (directory, edit
+// profile, roles, permissions, enable/disable, audit history). Settings
+// remains a placeholder landing page only.
+export const AdminUsersPage         = React.lazy(() => import('../pages/admin/UsersPage'));
+export const AdminUserDetailPage    = React.lazy(() => import('../pages/admin/UserDetailPage')); // WP-ADMIN-04 Phase 1B
+export const AdminAdministratorsPage      = React.lazy(() => import('../pages/admin/AdministratorsPage')); // WP-ADMIN-05A
+export const AdminAdministratorDetailPage = React.lazy(() => import('../pages/admin/AdministratorDetailPage')); // WP-ADMIN-05A
+export const AdminSettingsPage      = React.lazy(() => import('../pages/admin/SettingsPage'));
+
+// ── Admin Master Data pages (WP-ADMIN-02A) ─────────────────────────────────────
+export const AdminMasterDataSkillsPage = React.lazy(() => import('../pages/admin/master-data/SkillsPage'));
+// WP-ADMIN-COMP-03
+export const AdminMasterDataRolesPage = React.lazy(() => import('../pages/admin/master-data/RolesPage'));
+export const AdminMasterDataCareerDomainsPage = React.lazy(() => import('../pages/admin/master-data/CareerDomainsPage'));
+export const AdminMasterDataSkillClustersPage = React.lazy(() => import('../pages/admin/master-data/SkillClustersPage'));
+export const AdminMasterDataJobFamiliesPage = React.lazy(() => import('../pages/admin/master-data/JobFamiliesPage'));
+export const AdminMasterDataEducationLevelsPage = React.lazy(() => import('../pages/admin/master-data/EducationLevelsPage'));
+export const AdminMasterDataSalaryBenchmarksPage = React.lazy(() => import('../pages/admin/master-data/SalaryBenchmarksPage'));
+export const AdminMasterDataImportPage = React.lazy(() => import('../pages/admin/master-data/ImportPage'));
+
+// ── Admin Permission Management pages (WP-ADMIN-04F-09) ────────────────────────
+export const AdminPermissionsCatalogPage     = React.lazy(() => import('../pages/admin/permissions/PermissionsCatalogPage'));
+export const AdminPermissionDetailPage       = React.lazy(() => import('../pages/admin/permissions/PermissionDetailPage'));
+export const AdminPermissionAssignmentsPage  = React.lazy(() => import('../pages/admin/permissions/PermissionAssignmentsPage'));
+export const AdminPermissionEvaluationPage   = React.lazy(() => import('../pages/admin/permissions/PermissionEvaluationPage'));
 
 // ── Error pages ───────────────────────────────────────────────────────────────
 export const NotFoundPage           = React.lazy(() => import('../pages/errors/NotFoundPage'));
