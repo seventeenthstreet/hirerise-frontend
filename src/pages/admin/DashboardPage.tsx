@@ -312,18 +312,24 @@ export default function DashboardPage() {
       </DashboardSection>
 
       {/* ── Operations ───────────────────────────────────────────────────────── */}
-      {/* WP-ADMIN-COMP-06: Jobs is now a genuinely operational module (List,
+      {/* WP-ADMIN-COMP-06: Jobs is a genuinely operational module (List,
           Detail, Trigger Sync, sync status/history — see JobsPage.tsx) and
-          no longer carries a Coming Soon badge. Intelligence, Graph, and
-          Weights remain genuinely incomplete — routes are mounted (so the
-          pages are reachable for whoever is verifying them) but each is
-          explicitly badged Coming Soon rather than presented as
-          operational. */}
+          carries no Coming Soon badge.
+          WP-ADMIN-COMP-08: Graph is now also genuinely operational (Overview/
+          health/metrics/alerts, Dataset Administration, Validation,
+          Statistics, CSV Import, Import History — see GraphPage.tsx +
+          GraphImportPanel.tsx) and its Coming Soon badge has been removed
+          accordingly. Intelligence and Weights remain genuinely incomplete —
+          routes are mounted (so the pages are reachable for whoever is
+          verifying them) but each is explicitly badged Coming Soon rather
+          than presented as operational. Do not remove their badges without
+          the same kind of verified, end-to-end implementation Jobs and
+          Graph went through. */}
       <DashboardSection title="Operations">
         <DashboardGrid columns={4}>
           <QuickActionCard title="Jobs" description="Job listings & ingestion sync." icon={<IconJobs />} href={ROUTES.ADMIN_JOBS} />
           <QuickActionCard title="Intelligence" description="Career intelligence pipeline." icon={<IconIntelligence />} href={ROUTES.ADMIN_INTELLIGENCE} badge={{ variant: 'coming-soon' }} />
-          <QuickActionCard title="Graph" description="Career graph administration." icon={<IconGraph />} href={ROUTES.ADMIN_GRAPH} badge={{ variant: 'coming-soon' }} />
+          <QuickActionCard title="Graph" description="Career graph administration." icon={<IconGraph />} href={ROUTES.ADMIN_GRAPH} />
           <QuickActionCard title="Weights" description="Adaptive scoring weights." icon={<IconWeights />} href={ROUTES.ADMIN_WEIGHTS} badge={{ variant: 'coming-soon' }} />
         </DashboardGrid>
       </DashboardSection>

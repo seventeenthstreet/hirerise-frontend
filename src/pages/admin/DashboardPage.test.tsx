@@ -8,8 +8,9 @@
  *    links, not disabled "Not yet available" tiles.
  *  - Administration (Users, Administrators, Permissions) render as
  *    operational links.
- *  - Operations: Jobs renders as an operational link (WP-ADMIN-COMP-06);
- *    Intelligence/Graph/Weights render with an explicit "Coming Soon" badge.
+ *  - Operations: Jobs (WP-ADMIN-COMP-06) and Graph (WP-ADMIN-COMP-08)
+ *    render as operational links; Intelligence/Weights still render with
+ *    an explicit "Coming Soon" badge.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -108,16 +109,19 @@ describe('DashboardPage — capability-state reconciliation', () => {
     },
   );
 
-  it('renders Operations "Jobs" as an operational link (WP-ADMIN-COMP-06)', async () => {
-    mockDashboardDependencies();
-    renderWithProviders(<DashboardPage />);
+  it.each(['Jobs', 'Graph'])(
+    'renders Operations "%s" as an operational link (WP-ADMIN-COMP-06 / WP-ADMIN-COMP-08)',
+    async (title) => {
+      mockDashboardDependencies();
+      renderWithProviders(<DashboardPage />);
 
-    const card = getCardContainer('Jobs');
-    expect(card.tagName.toLowerCase()).toBe('a');
-    expect(within(card).queryByText('Coming Soon')).not.toBeInTheDocument();
-  });
+      const card = getCardContainer(title);
+      expect(card.tagName.toLowerCase()).toBe('a');
+      expect(within(card).queryByText('Coming Soon')).not.toBeInTheDocument();
+    },
+  );
 
-  it.each(['Intelligence', 'Graph', 'Weights'])(
+  it.each(['Intelligence', 'Weights'])(
     'renders Operations "%s" with a Coming Soon badge',
     async (title) => {
       mockDashboardDependencies();

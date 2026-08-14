@@ -254,6 +254,40 @@ export const queryKeys = {
     syncLogs: (limit: number) => ['admin-jobs', 'sync-logs', limit] as const,
   },
 
+  // ── Admin Graph (WP-ADMIN-COMP-08) ──────────────────────────────────────────
+  //
+  // Backs hooks/admin/useAdminGraph.ts — the Graph Administration overview,
+  // dataset status, validation, CSV import, and import-history UI.
+  //
+  //   ['admin-graph']                          ← root: all graph queries
+  //   ['admin-graph', 'metrics']                ← graph_metrics view
+  //   ['admin-graph', 'validate']                ← FK integrity report
+  //   ['admin-graph', 'dataset-statuses']        ← per-dataset row counts + last import
+  //   ['admin-graph', 'health']                  ← rolled-up health status
+  //   ['admin-graph', 'alerts']                  ← derived alerts
+  //   ['admin-graph', 'stats']                   ← career graph connectivity stats
+  //   ['admin-graph', 'import-logs', limit]      ← recent import history, keyed by page size
+
+  adminGraph: {
+    /** Root — invalidates every admin graph query. Used after a successful import. */
+    all: () => ['admin-graph'] as const,
+
+    metrics: () => ['admin-graph', 'metrics'] as const,
+
+    validate: () => ['admin-graph', 'validate'] as const,
+
+    datasetStatuses: () => ['admin-graph', 'dataset-statuses'] as const,
+
+    health: () => ['admin-graph', 'health'] as const,
+
+    alerts: () => ['admin-graph', 'alerts'] as const,
+
+    stats: () => ['admin-graph', 'stats'] as const,
+
+    /** Recent import history, keyed by the requested page size. */
+    importLogs: (limit: number) => ['admin-graph', 'import-logs', limit] as const,
+  },
+
   // ── Admin Administrators (WP-ADMIN-05A) ─────────────────────────────────────
   //
   // Backs hooks/admin/useAdministrators.ts — the Enterprise Administrator
